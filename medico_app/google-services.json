@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "104929393195",
+    "project_id": "appmed-6d031",
+    "storage_bucket": "appmed-6d031.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:104929393195:android:7970182c99ac269153486e",
+        "android_client_info": {
+          "package_name": "com.android.application"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCO6TUj8YuBCXR7ArR6pLcm8pIRJwbN1tw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
