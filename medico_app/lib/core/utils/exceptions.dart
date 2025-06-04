@@ -2,6 +2,9 @@
 class AuthException implements Exception {
   final String message;
   AuthException(this.message);
+
+  @override
+  String toString() => message; // Para exibir a mensagem diretamente
 }
 
 // Exceções específicas
@@ -14,7 +17,7 @@ class WeakPasswordAuthException extends AuthException {
 }
 
 class WrongPasswordAuthException extends AuthException {
-  WrongPasswordAuthException() : super('A senha está incorreta.');
+  WrongPasswordAuthException() : super('A senha ou e-mail estão incorretos.');
 }
 
 class UserNotFoundAuthException extends AuthException {

@@ -1,33 +1,44 @@
+// lib/app/config/router/app_router.dart
+import 'dart:async'; // GoRouterRefreshStream pode precisar
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+// Removi o import do firebase_auth.dart daqui, pois o AuthController o gerencia
+// import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../../features/authentication/presentation/controllers/auth_controller.dart';
 import '../../../features/authentication/presentation/screens/login_screen.dart';
 import '../../../features/authentication/presentation/screens/register_medico_screen.dart';
 import '../../../features/authentication/presentation/screens/register_paciente_screen.dart';
-import '../../../features/authentication/data/repositories/auth_repository.dart';
 
-// Tela simples para representar a home após o login
+// Tela de Home simples (mova para seu próprio arquivo em features/home/presentation/screens)
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Home')),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () => context.read<AuthRepository>().signOut(),
-          child: const Text('Sair'),
-        ),
+      appBar: AppBar(
+        title: const Text('Home'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => context.read<AuthController>().handleSignOut(),
+          ),
+        ],
       ),
+      body: const Center(child: Text('Bem-vindo!')),
     );
   }
 }
 
-
 class AppRouter {
-  static final router = GoRouter(
+  final AuthController authController;
+
+  AppRouter(this.authController);
+
+  late final GoRouter router = GoRouter(
     initialLocation: '/login',
+    refreshListenable: authController, // Ouve o AuthController
     routes: [
       GoRoute(
         path: '/login',
@@ -46,41 +57,27 @@ class AppRouter {
         builder: (context, state) => const HomeScreen(),
       ),
     ],
-    // Lógica de redirecionamento
     redirect: (context, state) {
-      final authRepository = context.read<AuthRepository>();
-      final isAuth = authRepository.currentUser != null;
-      final isLoggingIn = state.matchedLocation == '/login' ||
-          state.matchedLocation == '/register-medico' ||
-          state.matchedLocation == '/register-paciente';
+      final authStatus = authController.status;
+      final bool loggedIn = authStatus == AuthStatus.authenticated;
+      
+      final String location = state.uri.toString();
 
-      // Se não estiver logado e tentando acessar algo que não seja a tela de login/registro, redireciona para /login
-      if (!isAuth && !isLoggingIn) {
+      // NOME DA VARIÁVEL CORRIGIDO AQUI:
+      final isOnAuthRoutes = location.startsWith('/login') ||
+          location.startsWith('/register-medico') ||
+          location.startsWith('/register-paciente');
+
+      // Se não estiver logado e tentando acessar rota protegida
+      if (!loggedIn && !isOnAuthRoutes) { // Agora usa o nome correto
         return '/login';
       }
-      // Se estiver logado e na tela de login/registro, redireciona para /home
-      if (isAuth && isLoggingIn) {
+
+      // Se estiver logado e tentando acessar rota de autenticação
+      if (loggedIn && isOnAuthRoutes) { // Agora usa o nome correto
         return '/home';
       }
       return null; // Nenhuma ação de redirecionamento necessária
     },
-    // Atualiza as rotas quando o estado de autenticação muda
-    refreshListenable: GoRouterRefreshStream(
-      context.watch<AuthRepository>().authStateChanges(),
-    ),
   );
-}
-
-// Classe auxiliar para o refreshListenable do GoRouter
-class GoRouterRefreshStream extends ChangeNotifier {
-  GoRouterRefreshStream(Stream<dynamic> stream) {
-    notifyListeners();
-    _subscription = stream.asBroadcastStream().listen((_) => notifyListeners());
-  }
-  late final Stream<dynamic> _subscription;
-  @override
-  void dispose() {
-    _subscription.cancel();
-    super.dispose();
-  }
 }
