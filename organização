@@ -1,0 +1,36 @@
+Ótima pergunta. Visualizar a estrutura de pastas com os arquivos que acabamos de discutir ajuda a consolidar o conceito.
+
+Abaixo está exatamente como a sua pasta lib ficaria organizada com o código para a funcionalidade de login, cadastro e autenticação.
+
+Estrutura de Pastas (lib/)
+lib
+├── 📄 main.dart
+│
+├── 📁 app
+│   └── 📁 config
+│       ├── 📁 router
+│       │   └── 📄 app_router.dart
+│       └── 📁 theme
+│           └── 📄 app_theme.dart
+│
+├── 📁 core
+│   ├── 📁 models
+│   ├── 📁 services
+│   ├── 📁 utils
+│   └── 📁 widgets
+│
+└── 📁 features
+    └── 📁 authentication
+        ├── 📁 data
+        │   ├── 📁 models
+        │   │   └── 📄 app_user.dart
+        │   └── 📁 repositories
+        │       └── 📄 auth_repository.dart
+        │
+        └── 📁 presentation
+            ├── 📁 controllers
+            │   └── 📄 auth_controller.dart
+            └── 📁 screens
+                ├── 📄 login_screen.dart
+                ├── 📄 register_medico_screen.dart
+                └── 📄 register_paciente_screen.dart

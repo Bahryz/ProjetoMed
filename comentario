@@ -1,0 +1,430 @@
+Com certeza! A partir da estrutura que definimos, vamos montar um esqueleto funcional e bem organizado apenas para a parte de login/cadastro e autenticação.
+
+Vamos seguir passo a passo, criando os arquivos e o código necessários dentro da estrutura Feature-First.
+
+Passo 0: Configuração do Firebase
+Antes de tudo, certifique-se de que seu projeto Flutter está conectado ao Firebase:
+
+Crie um projeto no console do Firebase.
+Adicione um app Android e um app iOS ao seu projeto Firebase.
+Use o FlutterFire CLI para configurar seu app: flutterfire configure.
+No console do Firebase, habilite os seguintes serviços:
+Authentication: Ative o provedor "E-mail/senha".
+Firestore Database: Crie um banco de dados no modo de produção (vamos ajustar as regras de segurança depois).
+Passo 1: Ponto de Entrada e Rotas (main.dart e app/)
+1. lib/main.dart
+
+Este arquivo inicializa o Firebase e configura o gerenciador de rotas.
+
+Dart
+
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import 'app/config/router/app_router.dart';
+import 'app/config/theme/app_theme.dart';
+import 'features/authentication/data/repositories/auth_repository.dart';
+import 'features/authentication/presentation/controllers/auth_controller.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    // Suas opções do Firebase geradas pelo FlutterFire CLI
+    // options: DefaultFirebaseOptions.currentPlatform,
+  );
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // MultiProvider para injetar nossas dependências na árvore de widgets
+    return MultiProvider(
+      providers: [
+        // O repositório que se comunica com o Firebase
+        Provider<AuthRepository>(create: (_) => AuthRepository()),
+        // O controller que usa o repositório e gerencia o estado da UI
+        ChangeNotifierProvider<AuthController>(
+          create: (context) => AuthController(context.read<AuthRepository>()),
+        ),
+      ],
+      child: MaterialApp.router(
+        title: 'Projeto X',
+        theme: AppTheme.lightTheme,
+        routerConfig: AppRouter.router, // Nosso gerenciador de rotas
+        debugShowCheckedModeBanner: false,
+      ),
+    );
+  }
+}
+2. lib/app/config/router/app_router.dart
+
+Usaremos o go_router para gerenciar a navegação e redirecionar o usuário caso ele não esteja logado.
+
+Dart
+
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
+import '../../../features/authentication/presentation/screens/login_screen.dart';
+import '../../../features/authentication/presentation/screens/register_medico_screen.dart';
+import '../../../features/authentication/presentation/screens/register_paciente_screen.dart';
+import '../../../features/authentication/data/repositories/auth_repository.dart';
+
+// Tela simples para representar a home após o login
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Home')),
+      body: Center(
+        child: ElevatedButton(
+          onPressed: () => context.read<AuthRepository>().signOut(),
+          child: const Text('Sair'),
+        ),
+      ),
+    );
+  }
+}
+
+
+class AppRouter {
+  static final router = GoRouter(
+    initialLocation: '/login',
+    routes: [
+      GoRoute(
+        path: '/login',
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/register-medico',
+        builder: (context, state) => const RegisterMedicoScreen(),
+      ),
+      GoRoute(
+        path: '/register-paciente',
+        builder: (context, state) => const RegisterPacienteScreen(),
+      ),
+      GoRoute(
+        path: '/home',
+        builder: (context, state) => const HomeScreen(),
+      ),
+    ],
+    // Lógica de redirecionamento
+    redirect: (context, state) {
+      final authRepository = context.read<AuthRepository>();
+      final isAuth = authRepository.currentUser != null;
+      final isLoggingIn = state.matchedLocation == '/login' ||
+          state.matchedLocation == '/register-medico' ||
+          state.matchedLocation == '/register-paciente';
+
+      // Se não estiver logado e tentando acessar algo que não seja a tela de login/registro, redireciona para /login
+      if (!isAuth && !isLoggingIn) {
+        return '/login';
+      }
+      // Se estiver logado e na tela de login/registro, redireciona para /home
+      if (isAuth && isLoggingIn) {
+        return '/home';
+      }
+      return null; // Nenhuma ação de redirecionamento necessária
+    },
+    // Atualiza as rotas quando o estado de autenticação muda
+    refreshListenable: GoRouterRefreshStream(
+      context.watch<AuthRepository>().authStateChanges(),
+    ),
+  );
+}
+
+// Classe auxiliar para o refreshListenable do GoRouter
+class GoRouterRefreshStream extends ChangeNotifier {
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    notifyListeners();
+    _subscription = stream.asBroadcastStream().listen((_) => notifyListeners());
+  }
+  late final Stream<dynamic> _subscription;
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
+Passo 2: Construindo a features/authentication
+Agora, vamos preencher as pastas da nossa funcionalidade de autenticação.
+
+1. data/models/app_user.dart
+
+Um modelo de dados para representar nossos usuários (médicos e pacientes).
+
+Dart
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+enum UserRole { medico, paciente }
+
+class AppUser {
+  final String uid;
+  final String email;
+  final String nome;
+  final UserRole role;
+  final String? crm; // Opcional, apenas para médicos
+  final String? cpf; // Opcional, apenas para pacientes
+
+  AppUser({
+    required this.uid,
+    required this.email,
+    required this.nome,
+    required this.role,
+    this.crm,
+    this.cpf,
+  });
+
+  // Converte um Documento do Firestore para um objeto AppUser
+  factory AppUser.fromFirestore(DocumentSnapshot doc) {
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    return AppUser(
+      uid: doc.id,
+      email: data['email'],
+      nome: data['nome'],
+      role: UserRole.values.byName(data['role']), // 'medico' ou 'paciente'
+      crm: data['crm'],
+      cpf: data['cpf'],
+    );
+  }
+
+  // Converte um objeto AppUser para um Map para o Firestore
+  Map<String, dynamic> toFirestore() {
+    return {
+      'email': email,
+      'nome': nome,
+      'role': role.name,
+      if (crm != null) 'crm': crm,
+      if (cpf != null) 'cpf': cpf,
+    };
+  }
+}
+2. data/repositories/auth_repository.dart
+
+A classe que de fato se comunica com o Firebase Auth e Firestore.
+
+Dart
+
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../models/app_user.dart' as app_model;
+
+class AuthRepository {
+  final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  User? get currentUser => _firebaseAuth.currentUser;
+
+  // Stream para ouvir mudanças no estado de autenticação
+  Stream<User?> authStateChanges() => _firebaseAuth.authStateChanges();
+
+  // Cadastro de Médico [cite: 19]
+  Future<void> registerMedico({
+    required String email,
+    required String password,
+    required String nome,
+    required String crm,
+  }) async {
+    UserCredential userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+    User newUser = userCredential.user!;
+
+    // Salva informações adicionais no Firestore
+    final medico = app_model.AppUser(
+      uid: newUser.uid,
+      email: email,
+      nome: nome,
+      role: app_model.UserRole.medico,
+      crm: crm,
+    );
+    await _firestore.collection('users').doc(newUser.uid).set(medico.toFirestore());
+  }
+
+  // Cadastro de Paciente [cite: 29]
+  Future<void> registerPaciente({
+    required String email,
+    required String password,
+    required String nome,
+    required String cpf,
+  }) async {
+    UserCredential userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+    User newUser = userCredential.user!;
+
+    final paciente = app_model.AppUser(
+      uid: newUser.uid,
+      email: email,
+      nome: nome,
+      role: app_model.UserRole.paciente,
+      cpf: cpf,
+    );
+    await _firestore.collection('users').doc(newUser.uid).set(paciente.toFirestore());
+  }
+
+  // Login para ambos [cite: 33]
+  Future<void> signIn({required String email, required String password}) async {
+    await _firebaseAuth.signInWithEmailAndPassword(email: email, password: password);
+  }
+
+  // Logout
+  Future<void> signOut() async {
+    await _firebaseAuth.signOut();
+  }
+}
+3. presentation/controllers/auth_controller.dart
+
+Gerenciador de estado simples usando ChangeNotifier para controlar o estado da UI.
+
+Dart
+
+import 'package:flutter/material.dart';
+import '../repositories/auth_repository.dart';
+
+class AuthController extends ChangeNotifier {
+  final AuthRepository _repository;
+  AuthController(this._repository);
+
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
+
+  Future<bool> _handleAuthRequest(Future<void> Function() request) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      await request();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> handleSignIn(String email, String password) async {
+    return _handleAuthRequest(() => _repository.signIn(email: email, password: password));
+  }
+  
+  // Adicione aqui os handlers para registro de médico e paciente...
+}
+4. presentation/screens/login_screen.dart
+
+Uma tela de login básica que consome o AuthController. O design pode ser baseado na imagem que você forneceu.
+
+Dart
+
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
+import '../controllers/auth_controller.dart';
+
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Usamos o Consumer para ouvir as mudanças no AuthController
+    final authController = context.watch<AuthController>();
+
+    return Scaffold(
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Projeto X',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineLarge),
+                const SizedBox(height: 48),
+                TextFormField(
+                  controller: _emailController,
+                  decoration: const InputDecoration(labelText: 'Email'),
+                  validator: (value) =>
+                      (value?.isEmpty ?? true) ? 'Campo obrigatório' : null,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _passwordController,
+                  decoration: const InputDecoration(labelText: 'Senha'),
+                  obscureText: true,
+                  validator: (value) =>
+                      (value?.isEmpty ?? true) ? 'Campo obrigatório' : null,
+                ),
+                const SizedBox(height: 24),
+                // Exibe o indicador de progresso se estiver carregando
+                authController.isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : ElevatedButton(
+                        onPressed: () {
+                          if (_formKey.currentState!.validate()) {
+                            context.read<AuthController>().handleSignIn(
+                                  _emailController.text.trim(),
+                                  _passwordController.text.trim(),
+                                );
+                          }
+                        },
+                        child: const Text('Entrar'),
+                      ),
+                const SizedBox(height: 8),
+                // Exibe mensagem de erro se houver
+                if (authController.errorMessage != null)
+                  Text(
+                    authController.errorMessage!,
+                    style: const TextStyle(color: Colors.red),
+                    textAlign: TextAlign.center,
+                  ),
+                const SizedBox(height: 24),
+                TextButton(
+                  onPressed: () => context.go('/register-paciente'),
+                  child: const Text('Não tem cadastro? Cadastre-se como paciente.'),
+                ),
+                TextButton(
+                  onPressed: () => context.go('/register-medico'),
+                  child: const Text('É médico? Cadastre-se aqui.'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
