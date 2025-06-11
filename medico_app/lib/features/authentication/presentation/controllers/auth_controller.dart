@@ -1,4 +1,3 @@
-dart:lib/features/authentication/presentation/controllers/auth_controller.dart
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -57,6 +56,7 @@ class AuthController with ChangeNotifier {
     notifyListeners();
     try {
       await request();
+      _errorMessage = null; 
     } on AuthException catch (e) {
       _errorMessage = e.message;
     } finally {
@@ -72,7 +72,7 @@ class AuthController with ChangeNotifier {
   Future<void> handleLogin(String email, String password) async {
     await _handleAuthRequest(() => _repository.signIn(email, password));
   }
-
+  
   Future<void> handlePhoneSignIn(BuildContext context, String phoneNumber) async {
     await _handleAuthRequest(() async {
       await _repository.verifyPhoneNumber(
@@ -84,7 +84,9 @@ class AuthController with ChangeNotifier {
           throw AuthException(e.message ?? 'Erro na verificação do telefone.');
         },
         onCodeSent: (String verificationId, int? resendToken) {
-          if(context.mounted) GoRouter.of(context).push('/verify-otp', extra: verificationId);
+          if (context.mounted) {
+            GoRouter.of(context).push('/verify-otp', extra: verificationId);
+          }
         },
         onCodeAutoRetrievalTimeout: (String verificationId) {},
       );

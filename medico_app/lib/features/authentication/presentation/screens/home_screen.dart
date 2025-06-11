@@ -1,4 +1,3 @@
-dart:lib/features/authentication/presentation/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:medico_app/features/authentication/presentation/controllers/auth_controller.dart';
@@ -63,3 +62,4 @@ class HomeScreen extends StatelessWidget {
       },
     );
   }
+}

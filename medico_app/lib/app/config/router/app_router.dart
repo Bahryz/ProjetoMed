@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:medico_app/features/authentication/presentation/controllers/auth_controller.dart';
-import 'package:medico_app/features/authentication/presentation/screens/login_screen.dart';
+import 'package:medico_app/features/authentication/presentation/screens/phone_login.dart';
 import 'package:medico_app/features/authentication/presentation/screens/register_medico_screen.dart';
 import 'package:medico_app/features/authentication/presentation/screens/register_paciente_screen.dart';
 import 'package:medico_app/features/authentication/presentation/screens/verify_email_screen.dart';
@@ -48,9 +47,11 @@ class AppRouter {
       }
 
       if (authStatus == AuthStatus.authenticated) {
+        // Se o usuário tem um e-mail, ele DEVE ser verificado.
         if (user != null && user.email != null && !user.emailVerified) {
           return state.matchedLocation == '/verify-email' ? null : '/verify-email';
         }
+        // Se autenticado (e verificado, se aplicável), não deve acessar as telas de auth
         if (onAuthScreens) {
           return '/';
         }
