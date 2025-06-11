@@ -1,4 +1,3 @@
-// lib/features/authentication/presentation/screens/register_medico_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -30,31 +29,31 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
     super.dispose();
   }
 
+  // 1. AJUSTE A FUNÇÃO DE SUBMISSÃO
   Future<void> _submit() async {
-    if (_formKey.currentState!.validate()) {
-      final authController = context.read<AuthController>();
-      final appUser = AppUser(
-        uid: '', // Será preenchido pelo repositório
-        nome: _nomeController.text.trim(),
-        email: _emailController.text.trim(),
-        crm: _crmController.text.trim(),
-        userType: 'medico', 
-        cpf: null, // Pacientes não preenchem CRM
-      );
-
-      final success = await authController.handleRegister(
-        appUser,
-        _passwordController.text,
-      );
-
-      if (success && mounted) {
-        // O GoRouter cuidará do redirecionamento baseado no AuthStatus
-      } else if (!mounted) {
-        return;
-      }
-      // Se houver erro, a mensagem já está no authController.errorMessage
-      // e será exibida pelo Consumer/Watch.
+    // Apenas continua se o formulário for válido
+    if (!_formKey.currentState!.validate()) {
+      return;
     }
+
+    final authController = context.read<AuthController>();
+    final appUser = AppUser(
+      // O uid será preenchido pelo repositório
+      uid: '',
+      nome: _nomeController.text.trim(),
+      email: _emailController.text.trim(),
+      crm: _crmController.text.trim(),
+      userType: 'medico',
+      cpf: null, // Médico não preenche CPF nesta tela
+    );
+
+    // Chama o método de registro. O AuthController cuidará de mostrar
+    // o indicador de progresso e tratar os erros. O GoRouter cuidará do
+    // redirecionamento em caso de sucesso.
+    await authController.handleRegister(
+      appUser,
+      _passwordController.text,
+    );
   }
 
   @override
@@ -75,7 +74,8 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
                 TextFormField(
                   controller: _nomeController,
                   decoration: const InputDecoration(labelText: 'Nome Completo'),
-                  validator: (value) => (value?.isEmpty ?? true) ? 'Campo obrigatório' : null,
+                  validator: (value) =>
+                      (value?.isEmpty ?? true) ? 'Campo obrigatório' : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -84,7 +84,7 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
                     if (value?.isEmpty ?? true) return 'Campo obrigatório';
-                    if (!value!.contains('@')) return 'Email inválido';
+                    if (!value!.contains('@') || !value.contains('.')) return 'Email inválido';
                     return null;
                   },
                 ),
@@ -92,7 +92,8 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
                 TextFormField(
                   controller: _crmController,
                   decoration: const InputDecoration(labelText: 'CRM'),
-                  validator: (value) => (value?.isEmpty ?? true) ? 'Campo obrigatório' : null,
+                  validator: (value) =>
+                      (value?.isEmpty ?? true) ? 'Campo obrigatório' : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -101,7 +102,9 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
                   obscureText: true,
                   validator: (value) {
                     if (value?.isEmpty ?? true) return 'Campo obrigatório';
-                    if (value!.length < 6) return 'Senha muito curta (mínimo 6 caracteres)';
+                    if (value!.length < 6) {
+                      return 'Senha muito curta (mínimo 6 caracteres)';
+                    }
                     return null;
                   },
                 ),
@@ -112,7 +115,9 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
                   obscureText: true,
                   validator: (value) {
                     if (value?.isEmpty ?? true) return 'Campo obrigatório';
-                    if (value != _passwordController.text) return 'As senhas não coincidem';
+                    if (value != _passwordController.text) {
+                      return 'As senhas não coincidem';
+                    }
                     return null;
                   },
                 ),

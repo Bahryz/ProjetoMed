@@ -1,8 +1,7 @@
-// lib/features/authentication/data/repositories/auth_repository.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:medico_app/features/authentication/data/models/app_user.dart';
-import 'package:medico_app/core/utils/exceptions.dart'; // Importe suas exceções
+import 'package:medico_app/core/utils/exceptions.dart';
 
 class AuthRepository {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -11,6 +10,7 @@ class AuthRepository {
   User? get currentUser => _auth.currentUser;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
+  // ATUALIZAÇÃO 1: MÉTODO PARA ENVIAR E-MAIL DE VERIFICAÇÃO
   Future<void> registerUser(AppUser userData, String password) async {
     try {
       UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
@@ -19,10 +19,11 @@ class AuthRepository {
       );
 
       if (userCredential.user != null) {
-        // Criando um novo AppUser com o UID retornado pelo Firebase Auth
-        // Isso garante que o UID no modelo é o mesmo do Auth.
+        // Envia o e-mail de verificação para o novo usuário
+        await userCredential.user!.sendEmailVerification();
+
         AppUser userToSave = AppUser(
-          uid: userCredential.user!.uid, // UID do Firebase Auth
+          uid: userCredential.user!.uid,
           email: userData.email,
           nome: userData.nome,
           userType: userData.userType,
@@ -31,7 +32,7 @@ class AuthRepository {
         );
         await _firestore
             .collection('users')
-            .doc(userToSave.uid) // Usando o UID do Firebase Auth
+            .doc(userToSave.uid)
             .set(userToSave.toMap());
       }
     } on FirebaseAuthException catch (e) {
@@ -54,7 +55,6 @@ class AuthRepository {
       );
     } on FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found' || e.code == 'wrong-password' || e.code == 'invalid-credential') {
-        // Para 'invalid-credential', podemos usar a mesma mensagem de senha/email incorretos
         throw WrongPasswordAuthException();
       }
       throw AuthException('Erro ao fazer login: ${e.message}');
@@ -68,6 +68,16 @@ class AuthRepository {
       await _auth.signOut();
     } catch (e) {
       throw AuthException('Erro ao fazer logout.');
+    }
+  }
+
+  // ATUALIZAÇÃO 2: MÉTODO PARA RECUPERAÇÃO DE SENHA
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } on FirebaseAuthException catch (e) {
+      // Você pode adicionar um tratamento de erro mais específico aqui se quiser
+      throw AuthException('Erro ao enviar e-mail de redefinição: ${e.message}');
     }
   }
 }

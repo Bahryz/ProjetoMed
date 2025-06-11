@@ -1,4 +1,6 @@
-// lib/features/authentication/presentation/screens/register_paciente_screen.dart
+// 1. IMPORTE O PACOTE DE MÁSCARA
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -20,6 +22,13 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  // 2. CRIE A INSTÂNCIA DO FORMATADOR DE MÁSCARA PARA CPF
+  final _cpfFormatter = MaskTextInputFormatter(
+    mask: '###.###.###-##',
+    filter: {"#": RegExp(r'[0-9]')},
+    type: MaskAutoCompletionType.lazy,
+  );
+
   @override
   void dispose() {
     _nomeController.dispose();
@@ -30,29 +39,32 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
     super.dispose();
   }
 
+  // 3. AJUSTE A FUNÇÃO DE SUBMISSÃO
   Future<void> _submit() async {
-    if (_formKey.currentState!.validate()) {
-      final authController = context.read<AuthController>();
-      final appUser = AppUser(
-        uid: '', // Será preenchido pelo repositório
-        nome: _nomeController.text.trim(),
-        email: _emailController.text.trim(),
-        cpf: _cpfController.text.trim(),
-        userType: 'paciente',
-        crm: null, // Médicos não preenchem CPF
-      );
-
-      final success = await authController.handleRegister(
-        appUser,
-        _passwordController.text,
-      );
-      
-      if (success && mounted) {
-        // O GoRouter cuidará do redirecionamento baseado no AuthStatus
-      } else if (!mounted) {
-        return;
-      }
+    // Apenas continua se o formulário for válido
+    if (!_formKey.currentState!.validate()) {
+      return;
     }
+
+    final authController = context.read<AuthController>();
+    final appUser = AppUser(
+      // O uid será preenchido pelo repositório
+      uid: '', 
+      nome: _nomeController.text.trim(),
+      email: _emailController.text.trim(),
+      // Salva o CPF limpo, sem a máscara, no banco de dados
+      cpf: _cpfFormatter.getUnmaskedText(),
+      userType: 'paciente',
+      crm: null,
+    );
+
+    // Chama o método de registro. O AuthController cuidará de mostrar
+    // o indicador de progresso e tratar os erros. O GoRouter cuidará do
+    // redirecionamento em caso de sucesso.
+    await authController.handleRegister(
+      appUser,
+      _passwordController.text,
+    );
   }
 
   @override
@@ -73,7 +85,8 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                 TextFormField(
                   controller: _nomeController,
                   decoration: const InputDecoration(labelText: 'Nome Completo'),
-                  validator: (value) => (value?.isEmpty ?? true) ? 'Campo obrigatório' : null,
+                  validator: (value) =>
+                      (value?.isEmpty ?? true) ? 'Campo obrigatório' : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -82,20 +95,26 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
                     if (value?.isEmpty ?? true) return 'Campo obrigatório';
-                    if (!value!.contains('@')) return 'Email inválido';
+                    if (!value!.contains('@') || !value.contains('.')) return 'Email inválido';
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
+                // 4. APLIQUE A MÁSCARA E O VALIDADOR NO CAMPO CPF
                 TextFormField(
                   controller: _cpfController,
                   decoration: const InputDecoration(labelText: 'CPF'),
                   keyboardType: TextInputType.number,
-                  validator: (value) { // Adicione uma validação de CPF mais robusta se necessário
+                  // Aplica a formatação automática
+                  inputFormatters: [_cpfFormatter],
+                  validator: (value) {
                     if (value?.isEmpty ?? true) return 'Campo obrigatório';
-                    if (value!.replaceAll(RegExp(r'[^0-9]'), '').length != 11) return 'CPF inválido';
+                    // Valida se o CPF foi preenchido por completo
+                    if (_cpfFormatter.getUnmaskedText().length != 11) {
+                      return 'CPF inválido';
+                    }
                     return null;
-                  }
+                  },
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -104,7 +123,9 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                   obscureText: true,
                   validator: (value) {
                     if (value?.isEmpty ?? true) return 'Campo obrigatório';
-                    if (value!.length < 6) return 'Senha muito curta (mínimo 6 caracteres)';
+                    if (value!.length < 6) {
+                      return 'Senha muito curta (mínimo 6 caracteres)';
+                    }
                     return null;
                   },
                 ),
@@ -115,7 +136,9 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                   obscureText: true,
                   validator: (value) {
                     if (value?.isEmpty ?? true) return 'Campo obrigatório';
-                    if (value != _passwordController.text) return 'As senhas não coincidem';
+                    if (value != _passwordController.text) {
+                      return 'As senhas não coincidem';
+                    }
                     return null;
                   },
                 ),
