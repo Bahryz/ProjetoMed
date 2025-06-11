@@ -47,11 +47,9 @@ class AppRouter {
       }
 
       if (authStatus == AuthStatus.authenticated) {
-        // Se o usuário tem um e-mail, ele DEVE ser verificado.
         if (user != null && user.email != null && !user.emailVerified) {
           return state.matchedLocation == '/verify-email' ? null : '/verify-email';
         }
-        // Se autenticado (e verificado, se aplicável), não deve acessar as telas de auth
         if (onAuthScreens) {
           return '/';
         }

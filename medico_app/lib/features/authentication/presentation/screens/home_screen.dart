@@ -27,35 +27,39 @@ class HomeScreen extends StatelessWidget {
           body: Center(
             child: userProfile == null
                 ? const CircularProgressIndicator()
-                : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Bem-vindo(a), ${userProfile.nome ?? 'Usuário'}!',
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      const SizedBox(height: 8),
-                      if (userProfile.email != null && userProfile.email!.isNotEmpty)
+                : Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          'Seu e-mail: ${userProfile.email}',
-                          style: Theme.of(context).textTheme.bodyLarge,
+                          'Bem-vindo(a), ${userProfile.nome ?? 'Usuário'}!',
+                          style: Theme.of(context).textTheme.headlineSmall,
                         ),
-                       if (userProfile.telefone != null && userProfile.telefone!.isNotEmpty)
-                        Text(
-                          'Telefone: ${userProfile.telefone}',
-                          style: Theme.of(context).textTheme.bodyLarge,
-                        ),
-                      if (userProfile.crm != null)
-                        Text(
-                          'CRM: ${userProfile.crm}',
-                          style: Theme.of(context).textTheme.bodyLarge,
-                        ),
-                      if (userProfile.cpf != null)
-                        Text(
-                          'CPF: ${userProfile.cpf}',
-                          style: Theme.of(context).textTheme.bodyLarge,
-                        ),
-                    ],
+                        const SizedBox(height: 16),
+                        if (userProfile.email != null && userProfile.email!.isNotEmpty)
+                          Text(
+                            'E-mail: ${userProfile.email}',
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                        if (userProfile.telefone != null && userProfile.telefone!.isNotEmpty)
+                          Text(
+                            'Telefone: ${userProfile.telefone}',
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                        if (userProfile.crm != null)
+                          Text(
+                            'CRM: ${userProfile.crm}',
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                        if (userProfile.cpf != null)
+                          Text(
+                            'CPF: ${userProfile.cpf}',
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                      ],
+                    ),
                   ),
           ),
         );

@@ -64,7 +64,7 @@ class AuthRepository {
     }
   }
 
-  Future<void> verifyPhoneNumber({
+   Future<void> verifyPhoneNumber({
     required String phoneNumber,
     required Function(PhoneAuthCredential) verificationCompleted,
     required Function(FirebaseAuthException) verificationFailed,

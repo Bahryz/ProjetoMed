@@ -73,22 +73,24 @@ class AuthController with ChangeNotifier {
     await _handleAuthRequest(() => _repository.signIn(email, password));
   }
   
+// Substitua o método existente por este
   Future<void> handlePhoneSignIn(BuildContext context, String phoneNumber) async {
     await _handleAuthRequest(() async {
       await _repository.verifyPhoneNumber(
         phoneNumber: phoneNumber,
+        // Argumentos corrigidos:
         verificationCompleted: (PhoneAuthCredential credential) async {
           await _repository.signInWithSmsCode(credential.verificationId!, credential.smsCode!);
         },
         verificationFailed: (FirebaseAuthException e) {
           throw AuthException(e.message ?? 'Erro na verificação do telefone.');
         },
-        onCodeSent: (String verificationId, int? resendToken) {
+        codeSent: (String verificationId, int? resendToken) {
           if (context.mounted) {
             GoRouter.of(context).push('/verify-otp', extra: verificationId);
           }
         },
-        onCodeAutoRetrievalTimeout: (String verificationId) {},
+        codeAutoRetrievalTimeout: (String verificationId) {},
       );
     });
   }
