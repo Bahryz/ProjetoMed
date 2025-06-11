@@ -1,6 +1,8 @@
+dart:lib/features/authentication/presentation/controllers/auth_controller.dart
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:medico_app/core/utils/exceptions.dart';
 import 'package:medico_app/features/authentication/data/models/app_user.dart';
 import 'package:medico_app/features/authentication/data/repositories/auth_repository.dart';
@@ -16,6 +18,8 @@ class AuthController with ChangeNotifier {
 
   User? _user;
   User? get user => _user;
+  
+  AppUser? appUser;
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
@@ -27,18 +31,22 @@ class AuthController with ChangeNotifier {
     _subscription = _repository.authStateChanges.listen(_onAuthStateChanged);
   }
 
-  void _onAuthStateChanged(User? user) {
+  Future<void> _onAuthStateChanged(User? user) async {
     if (user == null) {
       _status = AuthStatus.unauthenticated;
       _user = null;
+      appUser = null;
     } else {
       _status = AuthStatus.authenticated;
       _user = user;
+      final profileData = await _repository.getUserProfile(user.uid);
+      if (profileData != null) {
+        appUser = AppUser.fromMap(profileData);
+      }
     }
     notifyListeners();
   }
 
-  // NOVO MÉTODO 1: PARA VERIFICAR O STATUS APÓS O USUÁRIO ATUALIZAR O E-MAIL
   void checkAuthStatus() {
     _onAuthStateChanged(_repository.currentUser);
   }
@@ -47,7 +55,6 @@ class AuthController with ChangeNotifier {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
-
     try {
       await request();
     } on AuthException catch (e) {
@@ -66,7 +73,30 @@ class AuthController with ChangeNotifier {
     await _handleAuthRequest(() => _repository.signIn(email, password));
   }
 
-  // NOVO MÉTODO 2: PARA FAZER LOGOUT
+  Future<void> handlePhoneSignIn(BuildContext context, String phoneNumber) async {
+    await _handleAuthRequest(() async {
+      await _repository.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        verificationCompleted: (PhoneAuthCredential credential) async {
+          await _repository.signInWithSmsCode(credential.verificationId!, credential.smsCode!);
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          throw AuthException(e.message ?? 'Erro na verificação do telefone.');
+        },
+        onCodeSent: (String verificationId, int? resendToken) {
+          if(context.mounted) GoRouter.of(context).push('/verify-otp', extra: verificationId);
+        },
+        onCodeAutoRetrievalTimeout: (String verificationId) {},
+      );
+    });
+  }
+
+  Future<void> handleOtpVerification(String verificationId, String smsCode) async {
+    await _handleAuthRequest(() async {
+      await _repository.signInWithSmsCode(verificationId, smsCode);
+    });
+  }
+
   Future<void> handleLogout() async {
     await _repository.signOut();
   }
