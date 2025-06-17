@@ -3,7 +3,6 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:medico_app/features/authentication/data/models/app_user.dart'; // Ajuste o import se necessário
 
 class ChatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;

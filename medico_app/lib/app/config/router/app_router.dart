@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:medico_app/features/authentication/presentation/controllers/auth_controller.dart';
 import 'package:medico_app/features/authentication/presentation/screens/phone_login.dart';

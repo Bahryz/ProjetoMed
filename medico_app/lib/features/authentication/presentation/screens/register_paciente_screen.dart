@@ -71,10 +71,9 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Criar Conta de Paciente'),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        foregroundColor: Colors.black87,
+        automaticallyImplyLeading: false, 
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -85,11 +84,11 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
               const Icon(Icons.person_add_alt_1_rounded, size: 60, color: primaryColor),
               const SizedBox(height: 10),
               const Text(
-                'Bem-vindo!',
+                'Crie sua Conta',
                 style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
               ),
               const Text(
-                'Preencha os dados para continuar',
+                'Bem-vindo! Preencha seus dados.',
                 style: TextStyle(fontSize: 16, color: Colors.grey),
               ),
               const SizedBox(height: 30),
@@ -132,7 +131,7 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                         IntlPhoneField(
                           decoration: inputDecoration.copyWith(
                             labelText: 'Telefone',
-                            counterText: "", // Remove o contador de caracteres
+                            counterText: "",
                           ),
                           languageCode: "pt_BR",
                           initialCountryCode: 'BR',
@@ -207,21 +206,25 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text("Já tem uma conta?"),
-                  TextButton(
-                    onPressed: () => context.go('/login'),
-                    child: const Text(
-                      'Entrar',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: primaryColor,
-                      ),
-                    ),
+              TextButton.icon(
+                // CORREÇÃO APLICADA AQUI
+                onPressed: () => context.go('/login'),
+                icon: Icon(Icons.arrow_back_ios_new, size: 16, color: primaryColor.withOpacity(0.8)),
+                label: const Text(
+                  'Voltar para o Login',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: primaryColor,
+                    fontSize: 16,
                   ),
-                ],
+                ),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: primaryColor.withOpacity(0.3)),
+                  ),
+                ),
               ),
               if (authController.errorMessage != null) ...[
                   const SizedBox(height: 8),

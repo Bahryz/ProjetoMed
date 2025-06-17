@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:medico_app/features/authentication/presentation/controllers/auth_controller.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';

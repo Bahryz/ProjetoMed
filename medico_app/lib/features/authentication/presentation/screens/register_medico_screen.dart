@@ -65,7 +65,6 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
   Widget build(BuildContext context) {
     final authController = context.watch<AuthController>();
 
-    // 1. DEFINIÇÃO DA NOVA COR PRIMÁRIA
     const primaryColor = Color(0xFFB89453);
 
     const inputDecoration = InputDecoration(
@@ -78,10 +77,9 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Criar Conta de Médico'),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        foregroundColor: Colors.black87,
+        automaticallyImplyLeading: false,
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -89,11 +87,10 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // 2. APLICAÇÃO DA NOVA COR NO ÍCONE
               const Icon(Icons.medical_services_outlined, size: 60, color: primaryColor),
               const SizedBox(height: 10),
-              const Text('Acesso Médico', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
-              const Text('Preencha seus dados profissionais', style: TextStyle(fontSize: 16, color: Colors.grey)),
+              const Text('Conta Profissional', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
+              const Text('Informe seus dados para o cadastro', style: TextStyle(fontSize: 16, color: Colors.grey)),
               const SizedBox(height: 30),
               Card(
                 elevation: 4,
@@ -168,10 +165,9 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
                         ),
                         const SizedBox(height: 16),
                         IntlPhoneField(
-                          // 3. REMOÇÃO DO CONTADOR "0/11"
                           decoration: inputDecoration.copyWith(
                             labelText: 'Telefone',
-                            counterText: "", // Deixa o texto do contador vazio
+                            counterText: "",
                           ),
                           languageCode: "pt_BR",
                           initialCountryCode: 'BR',
@@ -213,7 +209,6 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
                             ? const Center(child: CircularProgressIndicator())
                             : ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  // 4. APLICAÇÃO DA NOVA COR NO BOTÃO
                                   backgroundColor: primaryColor,
                                   padding: const EdgeInsets.symmetric(vertical: 16),
                                   shape: RoundedRectangleBorder(
@@ -229,16 +224,25 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text("Já tem uma conta?"),
-                  TextButton(
-                    onPressed: () => context.go('/login'),
-                    // 5. APLICAÇÃO DA NOVA COR NO LINK
-                    child: const Text('Entrar', style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor)),
+              TextButton.icon(
+                // CORREÇÃO APLICADA AQUI
+                onPressed: () => context.go('/login'),
+                icon: Icon(Icons.arrow_back_ios_new, size: 16, color: primaryColor.withOpacity(0.8)),
+                label: const Text(
+                  'Voltar para o Login',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: primaryColor,
+                    fontSize: 16,
                   ),
-                ],
+                ),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: primaryColor.withOpacity(0.3)),
+                  ),
+                ),
               ),
               if (authController.errorMessage != null) ...[
                   const SizedBox(height: 8),
