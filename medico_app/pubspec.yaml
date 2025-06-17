@@ -5,23 +5,27 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.8.0
+  sdk: '>=3.0.0 <4.0.0' # É uma boa prática definir um range
 
 dependencies:
   flutter:
     sdk: flutter
 
+  # Ícones e Utilitários
   cupertino_icons: ^1.0.8
-
-  # Firebase Core atualizado para compatibilidade
-  firebase_core: ^3.13.1
-  firebase_analytics: ^11.4.6
   go_router: ^15.1.2
   provider: ^6.1.5
+  
+  # Firebase
+  firebase_core: ^3.13.1
+  firebase_analytics: ^11.4.6
   firebase_auth: ^5.5.4
   cloud_firestore: ^5.6.8
+
+  # Formatação de campos
   mask_text_input_formatter: ^2.9.0
-  
+  intl_phone_field: ^3.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -30,4 +34,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-

@@ -5,7 +5,7 @@ import 'package:medico_app/features/authentication/presentation/screens/phone_lo
 import 'package:medico_app/features/authentication/presentation/screens/register_medico_screen.dart';
 import 'package:medico_app/features/authentication/presentation/screens/register_paciente_screen.dart';
 import 'package:medico_app/features/authentication/presentation/screens/verify_email_screen.dart';
-import 'package:medico_app/features/authentication/presentation/screens/home_screen.dart';
+import 'package:medico_app/features/authentication/presentation/screens/chat_screen.dart'; 
 import 'package:medico_app/features/authentication/presentation/screens/phone_login_screen.dart';
 import 'package:medico_app/features/authentication/presentation/screens/otp_verify_screen.dart';
 
@@ -29,7 +29,7 @@ class AppRouter {
           return OtpVerifyScreen(verificationId: verificationId);
         },
       ),
-      GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
+      GoRoute(path: '/', builder: (context, state) => const ChatScreen()),
     ],
     redirect: (context, state) {
       final authStatus = authController.authStatus;

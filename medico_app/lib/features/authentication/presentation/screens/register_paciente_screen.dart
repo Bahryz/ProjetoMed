@@ -1,6 +1,6 @@
-// 1. IMPORTE O PACOTE DE MÁSCARA
+// 1. IMPORTE OS PACOTES NECESSÁRIOS
+import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -21,8 +21,9 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
   final _cpfController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  // 2. CRIE UMA VARIÁVEL PARA GUARDAR O NÚMERO COMPLETO
+  String? _fullPhoneNumber;
 
-  // 2. CRIE A INSTÂNCIA DO FORMATADOR DE MÁSCARA PARA CPF
   final _cpfFormatter = MaskTextInputFormatter(
     mask: '###.###.###-##',
     filter: {"#": RegExp(r'[0-9]')},
@@ -39,28 +40,24 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
     super.dispose();
   }
 
-  // 3. AJUSTE A FUNÇÃO DE SUBMISSÃO
+  // 3. AJUSTE A FUNÇÃO DE SUBMISSÃO PARA INCLUIR O TELEFONE
   Future<void> _submit() async {
-    // Apenas continua se o formulário for válido
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
     final authController = context.read<AuthController>();
     final appUser = AppUser(
-      // O uid será preenchido pelo repositório
-      uid: '', 
+      uid: '',
       nome: _nomeController.text.trim(),
       email: _emailController.text.trim(),
-      // Salva o CPF limpo, sem a máscara, no banco de dados
       cpf: _cpfFormatter.getUnmaskedText(),
+      // Adiciona o telefone ao objeto AppUser
+      telefone: _fullPhoneNumber,
       userType: 'paciente',
       crm: null,
     );
 
-    // Chama o método de registro. O AuthController cuidará de mostrar
-    // o indicador de progresso e tratar os erros. O GoRouter cuidará do
-    // redirecionamento em caso de sucesso.
     await authController.handleRegister(
       appUser,
       _passwordController.text,
@@ -95,21 +92,36 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
                     if (value?.isEmpty ?? true) return 'Campo obrigatório';
-                    if (!value!.contains('@') || !value.contains('.')) return 'Email inválido';
+                    if (!value!.contains('@') || !value.contains('.'))
+                      return 'Email inválido';
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
-                // 4. APLIQUE A MÁSCARA E O VALIDADOR NO CAMPO CPF
+
+                // 4. ADICIONE O WIDGET DO CAMPO DE TELEFONE
+                IntlPhoneField(
+                  decoration: const InputDecoration(
+                    labelText: 'Telefone',
+                    border: OutlineInputBorder(
+                      borderSide: BorderSide(),
+                    ),
+                  ),
+                  initialCountryCode: 'BR', // Define o Brasil como país inicial
+                  onChanged: (phone) {
+                    // A cada alteração, salva o número completo (código do país + número)
+                    _fullPhoneNumber = phone.completeNumber;
+                  },
+                ),
+
+                const SizedBox(height: 16),
                 TextFormField(
                   controller: _cpfController,
                   decoration: const InputDecoration(labelText: 'CPF'),
                   keyboardType: TextInputType.number,
-                  // Aplica a formatação automática
                   inputFormatters: [_cpfFormatter],
                   validator: (value) {
                     if (value?.isEmpty ?? true) return 'Campo obrigatório';
-                    // Valida se o CPF foi preenchido por completo
                     if (_cpfFormatter.getUnmaskedText().length != 11) {
                       return 'CPF inválido';
                     }

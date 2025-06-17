@@ -1,3 +1,5 @@
+// 1. IMPORTE O PACOTE DO CAMPO DE TELEFONE
+import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -18,6 +20,8 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
   final _crmController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  // 2. CRIE A VARIÁVEL PARA O NÚMERO DE TELEFONE
+  String? _fullPhoneNumber;
 
   @override
   void dispose() {
@@ -29,27 +33,24 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
     super.dispose();
   }
 
-  // 1. AJUSTE A FUNÇÃO DE SUBMISSÃO
+  // 3. AJUSTE A FUNÇÃO DE SUBMISSÃO PARA INCLUIR O TELEFONE
   Future<void> _submit() async {
-    // Apenas continua se o formulário for válido
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
     final authController = context.read<AuthController>();
     final appUser = AppUser(
-      // O uid será preenchido pelo repositório
       uid: '',
       nome: _nomeController.text.trim(),
       email: _emailController.text.trim(),
       crm: _crmController.text.trim(),
+      // Adiciona o telefone ao objeto AppUser
+      telefone: _fullPhoneNumber,
       userType: 'medico',
-      cpf: null, // Médico não preenche CPF nesta tela
+      cpf: null,
     );
 
-    // Chama o método de registro. O AuthController cuidará de mostrar
-    // o indicador de progresso e tratar os erros. O GoRouter cuidará do
-    // redirecionamento em caso de sucesso.
     await authController.handleRegister(
       appUser,
       _passwordController.text,
@@ -84,7 +85,8 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
                     if (value?.isEmpty ?? true) return 'Campo obrigatório';
-                    if (!value!.contains('@') || !value.contains('.')) return 'Email inválido';
+                    if (!value!.contains('@') || !value.contains('.'))
+                      return 'Email inválido';
                     return null;
                   },
                 ),
@@ -95,6 +97,23 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
                   validator: (value) =>
                       (value?.isEmpty ?? true) ? 'Campo obrigatório' : null,
                 ),
+                const SizedBox(height: 16),
+
+                // 4. ADICIONE O WIDGET DO CAMPO DE TELEFONE
+                IntlPhoneField(
+                  decoration: const InputDecoration(
+                    labelText: 'Telefone',
+                    border: OutlineInputBorder(
+                      borderSide: BorderSide(),
+                    ),
+                  ),
+                  initialCountryCode: 'BR', // Define o Brasil como país inicial
+                  onChanged: (phone) {
+                    // Salva o número completo (código do país + número)
+                    _fullPhoneNumber = phone.completeNumber;
+                  },
+                ),
+
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _passwordController,
