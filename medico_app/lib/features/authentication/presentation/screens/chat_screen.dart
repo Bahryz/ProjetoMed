@@ -2,7 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:medico_app/features/authentication/presentation/controllers/auth_controller.dart';
+import 'package:medico_app/features/chat/services/chat_service.dart';
+import 'package:medico_app/features/chat/presentation/screens/detalhes_chat_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -104,117 +107,60 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
 }
 
 // Widget para a aba de conversas
-class ConversasTab extends StatefulWidget {
+class ConversasTab extends StatelessWidget {
   const ConversasTab({super.key});
 
   @override
-  State<ConversasTab> createState() => _ConversasTabState();
-}
-
-class _ConversasTabState extends State<ConversasTab> {
-  final TextEditingController _messageController = TextEditingController();
-  final List<Map<String, String>> _messages = [
-    {'sender': 'other', 'text': 'Olá! Como você está se sentindo hoje?'},
-    {'sender': 'me', 'text': 'Olá, doutor! Estou me sentindo um pouco melhor.'},
-    {'sender': 'other', 'text': 'Ótimo! Continue com a medicação.'},
-  ];
-
-  void _sendMessage() {
-    if (_messageController.text.isNotEmpty) {
-      setState(() {
-        _messages.add({'sender': 'me', 'text': _messageController.text});
-        _messageController.clear();
-      });
-      Future.delayed(const Duration(seconds: 1), () {
-        setState(() {
-          _messages.add({'sender': 'other', 'text': 'Entendido. Continue seguindo as recomendações.'});
-        });
-      });
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    // Para simplificar, estamos usando uma lista estática.
-    // O ideal seria ter uma lista de conversas aqui.
-    return ListView.builder(
-      itemCount: 1, // Apenas para simular uma conversa na lista
-      itemBuilder: (context, index) {
-        return ListTile(
-          leading: const CircleAvatar(
-            child: Icon(Icons.person),
-          ),
-          title: const Text('Dr. Silva'),
-          subtitle: Text(_messages.last['text']!), // Mostra a última mensagem
-          trailing: const Text('19:45'),
-          onTap: () {
-            // Ao clicar, poderia abrir a tela de chat detalhada
-            // Por enquanto, vamos manter a UI de chat simulada aqui
-            // mas o ideal é navegar para uma nova tela
-            showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              builder: (context) => Padding(
-                padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-                child: DraggableScrollableSheet(
-                  expand: false,
-                  initialChildSize: 0.9,
-                  builder: (_, controller) => Column(
-                    children: [
-                      Expanded(
-                        child: ListView.builder(
-                          controller: controller,
-                          padding: const EdgeInsets.all(16.0),
-                          itemCount: _messages.length,
-                          itemBuilder: (context, index) {
-                            final message = _messages[index];
-                            final isMe = message['sender'] == 'me';
-                            return Align(
-                              alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(vertical: 4.0),
-                                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-                                decoration: BoxDecoration(
-                                  color: isMe ? Colors.blue[100] : Colors.grey[300],
-                                  borderRadius: BorderRadius.circular(12.0),
-                                ),
-                                child: Text(message['text']!),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _messageController,
-                                decoration: InputDecoration(
-                                  hintText: 'Digite uma mensagem...',
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(20.0),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  filled: true,
-                                  fillColor: Colors.grey[200],
-                                ),
-                                onSubmitted: (value) => _sendMessage(),
-                              ),
-                            ),
-                            const SizedBox(width: 8.0),
-                            IconButton(
-                              icon: const Icon(Icons.send),
-                              onPressed: _sendMessage,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+    final authController = context.watch<AuthController>();
+    final userId = authController.user?.uid;
+    final chatService = ChatService();
+
+    if (userId == null) {
+      return const Center(child: Text("Usuário não autenticado."));
+    }
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: chatService.getConversasStream(userId),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return const Center(child: Text('Erro ao carregar conversas.'));
+        }
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final conversas = snapshot.data!.docs;
+
+        if (conversas.isEmpty) {
+          return const Center(child: Text('Nenhuma conversa encontrada.'));
+        }
+
+        return ListView.builder(
+          itemCount: conversas.length,
+          itemBuilder: (context, index) {
+            final conversaData = conversas[index].data() as Map<String, dynamic>;
+            
+            // Lógica para pegar o nome do outro usuário
+            // (requer acesso aos dados dos usuários)
+            final String nomeDestinatario = "Nome do Contato"; 
+            
+            return ListTile(
+              leading: const CircleAvatar(child: Icon(Icons.person)),
+              title: Text(nomeDestinatario),
+              subtitle: Text(conversaData['ultimaMensagem'] ?? ''),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => DetalhesChatScreen(
+                      conversaId: conversas[index].id,
+                      destinatarioNome: nomeDestinatario,
+                      remetenteId: userId,
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             );
           },
         );
