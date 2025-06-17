@@ -3,14 +3,14 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../controllers/auth_controller.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class PhoneLoginScreen extends StatefulWidget {
+  const PhoneLoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<PhoneLoginScreen> createState() => _PhoneLoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -22,132 +22,170 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // MÉTODO PARA MOSTRAR O DIÁLOGO DE REDEFINIÇÃO DE SENHA
-  void _showPasswordResetDialog(BuildContext context) {
-    final emailController = TextEditingController();
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
     final authController = context.read<AuthController>();
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Redefinir Senha'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Insira seu e-mail para receber o link de redefinição.'),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: emailController,
-                decoration: const InputDecoration(
-                  labelText: 'E-mail',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.emailAddress,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (emailController.text.isNotEmpty) {
-                  authController.handlePasswordReset(emailController.text);
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Se o e-mail estiver cadastrado, um link será enviado.'),
-                    ),
-                  );
-                }
-              },
-              child: const Text('Enviar'),
-            ),
-          ],
-        );
-      },
+    await authController.handleLogin(
+      _emailController.text.trim(),
+      _passwordController.text,
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final authController = context.watch<AuthController>();
+    const primaryColor = Color(0xFFB89453);
+
+    const inputDecoration = InputDecoration(
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(12.0)),
+      ),
+      contentPadding: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+    );
 
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text('Projeto Med', // Nome do App
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineLarge),
-                const SizedBox(height: 48),
-                TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(labelText: 'Email'),
-                  validator: (value) =>
-                      (value?.isEmpty ?? true) ? 'Campo obrigatório' : null,
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // 1. CABEÇALHO COM LOGO E BOAS-VINDAS
+              Icon(Icons.shield_moon_outlined, size: 60, color: primaryColor),
+              const SizedBox(height: 10),
+              const Text(
+                'Bem-vindo de Volta!',
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+              ),
+              const Text(
+                'Acesse sua conta para continuar',
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+              const SizedBox(height: 40),
+
+              // 2. FORMULÁRIO DE LOGIN DENTRO DE UM CARD
+              Card(
+                elevation: 4,
+                shadowColor: Colors.black12,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: const InputDecoration(labelText: 'Senha'),
-                  obscureText: true,
-                  validator: (value) =>
-                      (value?.isEmpty ?? true) ? 'Campo obrigatório' : null,
-                ),
-                // BOTÃO "ESQUECEU A SENHA?"
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () => _showPasswordResetDialog(context),
-                      child: const Text('Esqueceu a senha?'),
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        TextFormField(
+                          controller: _emailController,
+                          decoration: inputDecoration.copyWith(
+                            labelText: 'Email',
+                            prefixIcon: const Icon(Icons.email_outlined),
+                          ),
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Por favor, insira seu email';
+                            }
+                            if (!value.contains('@') || !value.contains('.')) {
+                              return 'Insira um email válido';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _passwordController,
+                          decoration: inputDecoration.copyWith(
+                            labelText: 'Senha',
+                            prefixIcon: const Icon(Icons.lock_outline),
+                          ),
+                          obscureText: true,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Por favor, insira sua senha';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 10),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () {
+                              // Adicionar lógica para "Esqueci a senha"
+                            },
+                            child: const Text('Esqueceu a senha?', style: TextStyle(color: primaryColor)),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        authController.isLoading
+                            ? const Center(child: CircularProgressIndicator())
+                            : ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: primaryColor,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                onPressed: _submit,
+                                child: const Text('Entrar', style: TextStyle(fontSize: 16, color: Colors.white)),
+                              ),
+                      ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                authController.isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : ElevatedButton(
-                        onPressed: () {
-                          if (_formKey.currentState!.validate()) {
-                            // CORRIGIDO: o método correto é handleLogin
-                            context.read<AuthController>().handleLogin(
-                                  _emailController.text.trim(),
-                                  _passwordController.text.trim(),
-                                );
-                          }
-                        },
-                        child: const Text('Entrar'),
+              ),
+              const SizedBox(height: 30),
+
+              // 3. OPÇÕES DE CADASTRO COM NOVO DESIGN
+              const Text('Não tem uma conta? Cadastre-se como:'),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.person_outline),
+                      label: const Text('Paciente'),
+                      onPressed: () => context.go('/register-paciente'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: primaryColor,
+                        side: BorderSide(color: primaryColor.withOpacity(0.5)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                const SizedBox(height: 8),
-                if (authController.errorMessage != null)
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.medical_services_outlined),
+                      label: const Text('Médico'),
+                      onPressed: () => context.go('/register-medico'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: primaryColor,
+                        side: BorderSide(color: primaryColor.withOpacity(0.5)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+               if (authController.errorMessage != null) ...[
+                  const SizedBox(height: 16),
                   Text(
                     authController.errorMessage!,
-                    style: const TextStyle(color: Colors.red),
+                    style: const TextStyle(color: Colors.red, fontSize: 14),
                     textAlign: TextAlign.center,
                   ),
-                const SizedBox(height: 24),
-                TextButton(
-                  onPressed: () => context.go('/register-paciente'),
-                  child: const Text('Não tem cadastro? Cadastre-se como paciente.'),
-                ),
-                TextButton(
-                  onPressed: () => context.go('/register-medico'),
-                  child: const Text('É médico? Cadastre-se aqui.'),
-                ),
-              ],
-            ),
+                ],
+            ],
           ),
         ),
       ),

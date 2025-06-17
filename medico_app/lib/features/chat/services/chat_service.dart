@@ -8,6 +8,26 @@ class ChatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
+  Future<String> getOrCreateConversation(String currentUserId, String otherUserId) async {
+    // Um ID de conversa único combinando os IDs dos usuários em ordem
+    List<String> userIds = [currentUserId, otherUserId];
+    userIds.sort();
+    String conversaId = userIds.join('_');
+
+    final conversationRef = _firestore.collection('conversas').doc(conversaId);
+    final docSnapshot = await conversationRef.get();
+
+    if (!docSnapshot.exists) {
+      // A conversa não existe, vamos criá-la
+      await conversationRef.set({
+        'participantes': [currentUserId, otherUserId],
+        'timestampUltimaMensagem': FieldValue.serverTimestamp(),
+      });
+    }
+
+    return conversaId;
+  }
+
   // Obter stream de conversas de um usuário
   Stream<QuerySnapshot> getConversasStream(String userId) {
     return _firestore

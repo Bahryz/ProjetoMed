@@ -1,5 +1,7 @@
 // medico_app/lib/features/authentication/presentation/screens/chat_screen.dart
-
+import 'package:medico_app/features/chat/presentation/screens/lista_usuarios_screen.dart';
+import 'package:medico_app/features/chat/services/user_service.dart';
+import 'package:medico_app/features/authentication/data/models/app_user.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -98,9 +100,12 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Ação do botão flutuante (ex: nova conversa)
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ListaUsuariosScreen()),
+          );
         },
-        child: const Icon(Icons.message),
+        child: const Icon(Icons.add_comment_rounded),
       ),
     );
   }
@@ -115,6 +120,7 @@ class ConversasTab extends StatelessWidget {
     final authController = context.watch<AuthController>();
     final userId = authController.user?.uid;
     final chatService = ChatService();
+    final userService = UserService();
 
     if (userId == null) {
       return const Center(child: Text("Usuário não autenticado."));
@@ -123,42 +129,52 @@ class ConversasTab extends StatelessWidget {
     return StreamBuilder<QuerySnapshot>(
       stream: chatService.getConversasStream(userId),
       builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return const Center(child: Text('Erro ao carregar conversas.'));
-        }
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+        if (snapshot.hasError) return const Center(child: Text('Erro ao carregar conversas.'));
+        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
 
         final conversas = snapshot.data!.docs;
-
-        if (conversas.isEmpty) {
-          return const Center(child: Text('Nenhuma conversa encontrada.'));
-        }
+        if (conversas.isEmpty) return const Center(child: Text('Nenhuma conversa encontrada.'));
 
         return ListView.builder(
           itemCount: conversas.length,
           itemBuilder: (context, index) {
             final conversaData = conversas[index].data() as Map<String, dynamic>;
+            final conversaId = conversas[index].id;
             
-            // Lógica para pegar o nome do outro usuário
-            // (requer acesso aos dados dos usuários)
-            final String nomeDestinatario = "Nome do Contato"; 
-            
-            return ListTile(
-              leading: const CircleAvatar(child: Icon(Icons.person)),
-              title: Text(nomeDestinatario),
-              subtitle: Text(conversaData['ultimaMensagem'] ?? ''),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => DetalhesChatScreen(
-                      conversaId: conversas[index].id,
-                      destinatarioNome: nomeDestinatario,
-                      remetenteId: userId,
-                    ),
-                  ),
+            final List<dynamic> participantes = conversaData['participantes'];
+            final String destinatarioId = participantes.firstWhere((id) => id != userId, orElse: () => '');
+
+            if (destinatarioId.isEmpty) return const SizedBox.shrink();
+
+            return FutureBuilder<AppUser?>(
+              future: userService.getUserData(destinatarioId),
+              builder: (context, userSnapshot) {
+                if (userSnapshot.connectionState == ConnectionState.waiting) {
+                  return const ListTile(title: Text("Carregando..."), leading: CircleAvatar());
+                }
+                
+                final destinatario = userSnapshot.data;
+                final nomeDestinatario = destinatario?.nome ?? 'Contato desconhecido';
+
+                // --- LINHA CORRIGIDA ---
+                final String inicial = nomeDestinatario.isNotEmpty ? nomeDestinatario[0].toUpperCase() : '?';
+
+                return ListTile(
+                  leading: CircleAvatar(child: Text(inicial)),
+                  title: Text(nomeDestinatario),
+                  subtitle: Text(conversaData['ultimaMensagem'] ?? 'Toque para conversar'),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DetalhesChatScreen(
+                          conversaId: conversaId,
+                          destinatarioNome: nomeDestinatario,
+                          remetenteId: userId,
+                        ),
+                      ),
+                    );
+                  },
                 );
               },
             );
