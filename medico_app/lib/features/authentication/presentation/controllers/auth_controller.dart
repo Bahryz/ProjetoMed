@@ -30,17 +30,22 @@ class AuthController with ChangeNotifier {
     _subscription = _repository.authStateChanges.listen(_onAuthStateChanged);
   }
 
+  bool _requiresTwoFactor = false;
+
   Future<void> _onAuthStateChanged(User? user) async {
     if (user == null) {
       _status = AuthStatus.unauthenticated;
       _user = null;
       appUser = null;
+      _requiresTwoFactor = false;
     } else {
-      _status = AuthStatus.authenticated;
-      _user = user;
-      final profileData = await _repository.getUserProfile(user.uid);
-      if (profileData != null) {
-        appUser = AppUser.fromMap(profileData);
+      if (!_requiresTwoFactor) {
+        _status = AuthStatus.authenticated;
+        _user = user;
+        final profileData = await _repository.getUserProfile(user.uid);
+        if (profileData != null) {
+          appUser = AppUser.fromMap(profileData);
+        }
       }
     }
     notifyListeners();
@@ -48,6 +53,11 @@ class AuthController with ChangeNotifier {
 
   void checkAuthStatus() {
     _onAuthStateChanged(_repository.currentUser);
+  }
+
+  void clearError() {
+    _errorMessage = null;
+    notifyListeners();
   }
 
   Future<void> _handleAuthRequest(Future<void> Function() request) async {
@@ -69,18 +79,37 @@ class AuthController with ChangeNotifier {
     await _handleAuthRequest(() => _repository.registerUser(userData, password));
   }
 
-  Future<void> handleLogin(String email, String password) async {
-    await _handleAuthRequest(() => _repository.signIn(email, password));
+   Future<void> handleLogin(BuildContext context, String email, String password) async {
+    await _handleAuthRequest(() async {
+       await _repository.signIn(email, password);
+
+       final currentUser = _repository.currentUser;
+      if (currentUser != null) {
+         final userProfileMap = await _repository.getUserProfile(currentUser.uid);
+        if (userProfileMap != null) {
+          final userDetails = AppUser.fromMap(userProfileMap);
+          _requiresTwoFactor = true; // Ativa a flag de 2FA
+          if (context.mounted) {
+            context.go('/two-factor-auth', extra: userDetails);
+          }
+        } else {
+           await handleLogout();
+          throw AuthException("Perfil do usuário não encontrado no banco de dados.");
+        }
+      } else {
+        throw AuthException("Ocorreu um erro inesperado durante o login.");
+      }
+    });
   }
   
-// Substitua o método existente por este
   Future<void> handlePhoneSignIn(BuildContext context, String phoneNumber) async {
     await _handleAuthRequest(() async {
       await _repository.verifyPhoneNumber(
         phoneNumber: phoneNumber,
-        // Argumentos corrigidos:
         verificationCompleted: (PhoneAuthCredential credential) async {
           await _repository.signInWithSmsCode(credential.verificationId!, credential.smsCode!);
+          _requiresTwoFactor = false;
+          notifyListeners();
         },
         verificationFailed: (FirebaseAuthException e) {
           throw AuthException(e.message ?? 'Erro na verificação do telefone.');
@@ -95,9 +124,20 @@ class AuthController with ChangeNotifier {
     });
   }
 
+  Future<void> handleEmailLinkSignIn(BuildContext context, String email) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("A funcionalidade de link por e-mail ainda não foi implementada."),
+        backgroundColor: Colors.amber,
+      ),
+    );
+  }
+
   Future<void> handleOtpVerification(String verificationId, String smsCode) async {
     await _handleAuthRequest(() async {
       await _repository.signInWithSmsCode(verificationId, smsCode);
+      _requiresTwoFactor = false;
+      _onAuthStateChanged(_repository.currentUser);
     });
   }
 

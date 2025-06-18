@@ -6,6 +6,10 @@ import 'package:provider/provider.dart';
 import 'package:medico_app/features/authentication/data/models/app_user.dart';
 import '../controllers/auth_controller.dart';
 
+/// Tela de cadastro para usuários do tipo "Paciente".
+///
+/// Coleta as informações básicas do paciente, como nome, e-mail,
+/// CPF e telefone, além de uma senha para a criação da conta.
 class RegisterPacienteScreen extends StatefulWidget {
   const RegisterPacienteScreen({super.key});
 
@@ -22,11 +26,9 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
   final _confirmPasswordController = TextEditingController();
   String? _fullPhoneNumber;
 
+  /// Formata o campo de texto para o padrão de CPF brasileiro.
   final _cpfFormatter = MaskTextInputFormatter(
       mask: '###.###.###-##', filter: {"#": RegExp(r'[0-9]')});
-      
-  final _phoneFormatter = MaskTextInputFormatter(
-      mask: '(##) #####-####', filter: {"#": RegExp(r'[0-9]')});
 
   @override
   void dispose() {
@@ -38,8 +40,14 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
     super.dispose();
   }
 
+  /// Valida o formulário e submete os dados de registro.
+  ///
+  /// Cria um objeto [AppUser] com os dados do paciente e chama o
+  /// [AuthController] para processar o registro.
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
     final authController = context.read<AuthController>();
     final appUser = AppUser(
@@ -135,7 +143,6 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                           ),
                           languageCode: "pt_BR",
                           initialCountryCode: 'BR',
-                          inputFormatters: [_phoneFormatter],
                           onChanged: (phone) {
                             _fullPhoneNumber = phone.completeNumber;
                           },
@@ -163,7 +170,7 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                             prefixIcon: const Icon(Icons.lock_outline),
                           ),
                           obscureText: true,
-                           validator: (v) {
+                            validator: (v) {
                             if (v?.isEmpty ?? true) return 'Campo obrigatório';
                             if (v!.length < 6) return 'Senha deve ter no mínimo 6 caracteres';
                             return null;
@@ -178,7 +185,7 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                           ),
                           obscureText: true,
                           validator: (v) {
-                             if (v?.isEmpty ?? true) return 'Campo obrigatório';
+                              if (v?.isEmpty ?? true) return 'Campo obrigatório';
                             if (v != _passwordController.text) return 'As senhas não coincidem';
                             return null;
                           },
@@ -206,24 +213,29 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              TextButton.icon(
-                // CORREÇÃO APLICADA AQUI
+              TextButton(
                 onPressed: () => context.go('/login'),
-                icon: Icon(Icons.arrow_back_ios_new, size: 16, color: primaryColor.withOpacity(0.8)),
-                label: const Text(
-                  'Voltar para o Login',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: primaryColor,
-                    fontSize: 16,
-                  ),
-                ),
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: primaryColor.withOpacity(0.3)),
+                    side: BorderSide(color: primaryColor.withAlpha(77)),
                   ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.arrow_back_ios_new, size: 16, color: primaryColor.withAlpha(204)),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Voltar para o Login',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: primaryColor,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               if (authController.errorMessage != null) ...[

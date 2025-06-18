@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
-import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
-import 'package:provider/provider.dart';
 import 'package:medico_app/features/authentication/data/models/app_user.dart';
+import 'package:provider/provider.dart';
 import '../controllers/auth_controller.dart';
 
+/// Tela de cadastro para usuários do tipo "Médico".
+///
+/// Coleta informações específicas do profissional de saúde, como nome,
+/// e-mail, CRM e telefone, além de uma senha para a conta.
 class RegisterMedicoScreen extends StatefulWidget {
   const RegisterMedicoScreen({super.key});
 
@@ -23,9 +26,7 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
   String? _fullPhoneNumber;
   String? _selectedUF;
 
-  final _phoneFormatter = MaskTextInputFormatter(
-      mask: '(##) #####-####', filter: {"#": RegExp(r'[0-9]')});
-
+  /// Lista de Unidades Federativas (estados) do Brasil para o dropdown do CRM.
   final List<String> _estados = [
     'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS',
     'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC',
@@ -42,8 +43,14 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
     super.dispose();
   }
 
+  /// Valida o formulário e submete os dados de registro.
+  ///
+  /// Cria um objeto [AppUser] com os dados do médico e chama o
+  /// [AuthController] para processar o registro.
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
     final authController = context.read<AuthController>();
     final crmCompleto = '${_crmController.text.trim()}/$_selectedUF';
@@ -171,7 +178,6 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
                           ),
                           languageCode: "pt_BR",
                           initialCountryCode: 'BR',
-                          inputFormatters: [_phoneFormatter],
                           onChanged: (phone) {
                             _fullPhoneNumber = phone.completeNumber;
                           },
@@ -184,7 +190,7 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
                             prefixIcon: const Icon(Icons.lock_outline),
                           ),
                           obscureText: true,
-                           validator: (v) {
+                            validator: (v) {
                             if (v?.isEmpty ?? true) return 'Campo obrigatório';
                             if (v!.length < 6) return 'Senha deve ter no mínimo 6 caracteres';
                             return null;
@@ -224,24 +230,29 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              TextButton.icon(
-                // CORREÇÃO APLICADA AQUI
+              TextButton(
                 onPressed: () => context.go('/login'),
-                icon: Icon(Icons.arrow_back_ios_new, size: 16, color: primaryColor.withOpacity(0.8)),
-                label: const Text(
-                  'Voltar para o Login',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: primaryColor,
-                    fontSize: 16,
-                  ),
-                ),
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: primaryColor.withOpacity(0.3)),
+                    side: BorderSide(color: primaryColor.withAlpha(77)),
                   ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.arrow_back_ios_new, size: 16, color: primaryColor.withAlpha(204)),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Voltar para o Login',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: primaryColor,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               if (authController.errorMessage != null) ...[

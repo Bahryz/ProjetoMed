@@ -27,12 +27,13 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
     final authController = context.read<AuthController>();
+    // CORREÇÃO: A chamada de `handleLogin` agora passa o BuildContext
     await authController.handleLogin(
+      context,
       _emailController.text.trim(),
       _passwordController.text,
     );
   }
-
   
   void _showPasswordResetDialog() {
     final emailResetController = TextEditingController();
@@ -87,15 +88,15 @@ class _LoginScreenState extends State<LoginScreen> {
               onPressed: () async {
                 if (emailResetController.text.trim().isNotEmpty) {
                   await authController.handlePasswordReset(emailResetController.text.trim());
-                  if (mounted) Navigator.of(dialogContext).pop();
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Link de redefinição enviado! Verifique seu email."),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  }
+                  // CORREÇÃO: A verificação 'mounted' agora guarda o uso do context
+                  if (!mounted) return;
+                  Navigator.of(dialogContext).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Link de redefinição enviado! Verifique seu email."),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
                 }
               },
               child: const Text("Enviar", style: TextStyle(color: Colors.white)),
@@ -158,10 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           keyboardType: TextInputType.emailAddress,
                           validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Por favor, insira seu email';
-                            }
-                            if (!value.contains('@') || !value.contains('.')) {
+                            if (value == null || value.isEmpty || !value.contains('@')) {
                               return 'Insira um email válido';
                             }
                             return null;
@@ -204,37 +202,21 @@ class _LoginScreenState extends State<LoginScreen> {
                                 onPressed: _submit,
                                 child: const Text('Entrar', style: TextStyle(fontSize: 16, color: Colors.white)),
                               ),
-                        
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 20.0),
-                          child: Row(
-                            children: [
-                              Expanded(child: Divider()),
-                              Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 8.0),
-                                child: Text('Ou'),
-                              ),
-                              Expanded(child: Divider()),
-                            ],
-                          ),
-                        ),
-                        OutlinedButton.icon(
-                          icon: const Icon(Icons.sms_outlined),
-                          label: const Text('Acessar com Celular'),
-                          onPressed: () => context.go('/phone-login'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: primaryColor,
-                            side: BorderSide(color: primaryColor.withOpacity(0.5)),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                        ),
                       ],
                     ),
                   ),
                 ),
               ),
               const SizedBox(height: 30),
+               if (authController.errorMessage != null) ...[
+                const SizedBox(height: 16),
+                Text(
+                  authController.errorMessage!,
+                  style: const TextStyle(color: Colors.red, fontSize: 14),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+              const SizedBox(height: 16),
               const Text('Não tem uma conta? Cadastre-se como:'),
               const SizedBox(height: 16),
               Row(
@@ -246,7 +228,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: () => context.go('/register-paciente'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: primaryColor,
-                        side: BorderSide(color: primaryColor.withOpacity(0.5)),
+                        // CORREÇÃO: Deprecated 'withOpacity' removido
+                        side: BorderSide(color: primaryColor.withAlpha(128)),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
@@ -260,7 +243,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: () => context.go('/register-medico'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: primaryColor,
-                        side: BorderSide(color: primaryColor.withOpacity(0.5)),
+                         // CORREÇÃO: Deprecated 'withOpacity' removido
+                        side: BorderSide(color: primaryColor.withAlpha(128)),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
@@ -268,14 +252,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ],
               ),
-               if (authController.errorMessage != null) ...[
-                  const SizedBox(height: 16),
-                  Text(
-                    authController.errorMessage!,
-                    style: const TextStyle(color: Colors.red, fontSize: 14),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
             ],
           ),
         ),
