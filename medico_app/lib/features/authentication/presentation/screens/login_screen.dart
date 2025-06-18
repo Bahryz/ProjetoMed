@@ -3,14 +3,14 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../controllers/auth_controller.dart';
 
-class PhoneLoginScreen extends StatefulWidget {
-  const PhoneLoginScreen({super.key});
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
 
   @override
-  State<PhoneLoginScreen> createState() => _PhoneLoginScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
+class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -30,6 +30,79 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
     await authController.handleLogin(
       _emailController.text.trim(),
       _passwordController.text,
+    );
+  }
+
+  
+  void _showPasswordResetDialog() {
+    final emailResetController = TextEditingController();
+    final authController = context.read<AuthController>();
+    const primaryColor = Color(0xFFB89453);
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.lock_reset, color: primaryColor),
+              SizedBox(width: 10),
+              Text("Redefinir Senha"),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                "Insira seu email e enviaremos um link para você redefinir sua senha.",
+                style: TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: emailResetController,
+                decoration: InputDecoration(
+                  labelText: "Email",
+                  prefixIcon: const Icon(Icons.email_outlined),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                keyboardType: TextInputType.emailAddress,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text("Cancelar", style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () async {
+                if (emailResetController.text.trim().isNotEmpty) {
+                  await authController.handlePasswordReset(emailResetController.text.trim());
+                  if (mounted) Navigator.of(dialogContext).pop();
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Link de redefinição enviado! Verifique seu email."),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text("Enviar", style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -53,8 +126,7 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // 1. CABEÇALHO COM LOGO E BOAS-VINDAS
-              Icon(Icons.shield_moon_outlined, size: 60, color: primaryColor),
+              const Icon(Icons.shield_moon_outlined, size: 60, color: primaryColor),
               const SizedBox(height: 10),
               const Text(
                 'Bem-vindo de Volta!',
@@ -65,8 +137,6 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
                 style: TextStyle(fontSize: 16, color: Colors.grey),
               ),
               const SizedBox(height: 40),
-
-              // 2. FORMULÁRIO DE LOGIN DENTRO DE UM CARD
               Card(
                 elevation: 4,
                 shadowColor: Colors.black12,
@@ -116,9 +186,7 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
-                            onPressed: () {
-                              // Adicionar lógica para "Esqueci a senha"
-                            },
+                            onPressed: _showPasswordResetDialog,
                             child: const Text('Esqueceu a senha?', style: TextStyle(color: primaryColor)),
                           ),
                         ),
@@ -136,14 +204,37 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
                                 onPressed: _submit,
                                 child: const Text('Entrar', style: TextStyle(fontSize: 16, color: Colors.white)),
                               ),
+                        
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20.0),
+                          child: Row(
+                            children: [
+                              Expanded(child: Divider()),
+                              Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 8.0),
+                                child: Text('Ou'),
+                              ),
+                              Expanded(child: Divider()),
+                            ],
+                          ),
+                        ),
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.sms_outlined),
+                          label: const Text('Acessar com Celular'),
+                          onPressed: () => context.go('/phone-login'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: primaryColor,
+                            side: BorderSide(color: primaryColor.withOpacity(0.5)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
                       ],
                     ),
                   ),
                 ),
               ),
               const SizedBox(height: 30),
-
-              // 3. OPÇÕES DE CADASTRO COM NOVO DESIGN
               const Text('Não tem uma conta? Cadastre-se como:'),
               const SizedBox(height: 16),
               Row(

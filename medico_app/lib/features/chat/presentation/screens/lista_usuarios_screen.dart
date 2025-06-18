@@ -30,6 +30,8 @@ class ListaUsuariosScreen extends StatelessWidget {
         stream: userService.getMedicosStream(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
+            // Se houver um erro no stream, mostre aqui
+            debugPrint("Erro no StreamBuilder: ${snapshot.error}");
             return const Center(child: Text('Erro ao carregar usuários.'));
           }
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -42,34 +44,53 @@ class ListaUsuariosScreen extends StatelessWidget {
             itemCount: medicos.length,
             itemBuilder: (context, index) {
               final medico = medicos[index];
-
-              if (medico.uid == currentUserId) {
-                return const SizedBox.shrink();
-              }
+              if (medico.uid == currentUserId) return const SizedBox.shrink();
               
-              // --- LINHA CORRIGIDA ---
-              // Usamos '??' para fornecer um valor padrão se nome for nulo,
-              // e '?.' para só chamar substring se nome não for nulo.
               final String inicial = medico.nome?.isNotEmpty == true ? medico.nome![0].toUpperCase() : 'M';
 
               return ListTile(
                 leading: CircleAvatar(child: Text(inicial)),
                 title: Text(medico.nome ?? 'Nome não disponível'),
                 subtitle: const Text("Médico"),
+                // --- ONTAP ATUALIZADO COM DIAGNÓSTICO ---
                 onTap: () async {
-                  final conversaId = await chatService.getOrCreateConversation(currentUserId, medico.uid);
-                  
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => DetalhesChatScreen(
-                        conversaId: conversaId,
-                        destinatarioNome: medico.nome ?? 'Médico',
-                        remetenteId: currentUserId,
-                      ),
-                    ),
-                  );
+                  try {
+                    debugPrint("onTap iniciado para o médico: ${medico.nome}");
+                    
+                    debugPrint("Tentando criar ou obter a conversa...");
+                    final conversaId = await chatService.getOrCreateConversation(currentUserId, medico.uid);
+                    debugPrint("Conversa ID obtida com sucesso: $conversaId");
+
+                    // Se chegou até aqui, a navegação deve ocorrer
+                    debugPrint("Navegando para a tela de detalhes do chat...");
+                    
+                    // Usamos context.mounted para garantir que o widget ainda está na árvore
+                    if (context.mounted) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DetalhesChatScreen(
+                            conversaId: conversaId,
+                            destinatarioNome: medico.nome ?? 'Médico',
+                            remetenteId: currentUserId,
+                          ),
+                        ),
+                      );
+                      debugPrint("Navegação concluída.");
+                    }
+
+                  } catch (e) {
+                    // Se qualquer erro acontecer no processo, será impresso aqui
+                    debugPrint("!!!!!!!!!! ERRO NO ONTAP !!!!!!!!!!");
+                    debugPrint(e.toString());
+                    if (context.mounted) {
+                       ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text("Erro ao iniciar conversa: $e"))
+                      );
+                    }
+                  }
                 },
+                // --- FIM DO ONTAP ATUALIZADO ---
               );
             },
           );
