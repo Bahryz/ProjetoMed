@@ -1,13 +1,12 @@
-// medico_app/lib/features/authentication/presentation/screens/chat_screen.dart
-import 'package:medico_app/features/chat/presentation/screens/lista_usuarios_screen.dart';
-import 'package:medico_app/features/chat/services/user_service.dart';
-import 'package:medico_app/features/authentication/data/models/app_user.dart';
 import 'package:flutter/material.dart';
+import 'package:medico_app/features/chat/presentation/screens/detalhes_chat_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:medico_app/features/authentication/data/models/app_user.dart';
 import 'package:medico_app/features/authentication/presentation/controllers/auth_controller.dart';
+import 'package:medico_app/features/chat/presentation/screens/lista_usuarios_screen.dart';
 import 'package:medico_app/features/chat/services/chat_service.dart';
-import 'package:medico_app/features/chat/presentation/screens/detalhes_chat_screen.dart';
+import 'package:medico_app/features/chat/services/user_service.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -16,14 +15,17 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-// Usamos o 'SingleTickerProviderStateMixin' para a animação das abas
 class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+
+  // Definindo a paleta de cores baseada na tela de login
+  static const Color primaryColor = Color(0xFFB89453);
+  static const Color accentColor = Color(0xFF4A4A4A);
+  static const Color backgroundColor = Color(0xFFF7F7F7);
 
   @override
   void initState() {
     super.initState();
-    // Inicializa o TabController com 3 abas
     _tabController = TabController(length: 3, vsync: this);
   }
 
@@ -39,14 +41,15 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     final userProfile = authController.appUser;
 
     return Scaffold(
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: Text(userProfile?.nome ?? 'ChatApp'),
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: CircleAvatar(
-            child: Text(userProfile?.nome?.substring(0, 1) ?? 'U'),
-          ),
+        backgroundColor: Colors.white,
+        elevation: 1.0,
+        title: Text(
+          userProfile?.nome ?? 'Chat',
+          style: const TextStyle(color: accentColor, fontWeight: FontWeight.bold),
         ),
+        iconTheme: const IconThemeData(color: accentColor),
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
@@ -56,11 +59,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
           ),
           PopupMenuButton<String>(
             onSelected: (value) {
-              if (value == 'settings') {
-                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Tela de Configurações ainda não implementada.')),
-                );
-              } else if (value == 'logout') {
+              if (value == 'logout') {
                 context.read<AuthController>().handleLogout();
               }
             },
@@ -76,9 +75,12 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
             ],
           ),
         ],
-        // Adicionamos a TabBar aqui
         bottom: TabBar(
           controller: _tabController,
+          labelColor: primaryColor,
+          unselectedLabelColor: Colors.grey,
+          indicatorColor: primaryColor,
+          indicatorWeight: 3.0,
           tabs: const [
             Tab(text: 'CONVERSAS'),
             Tab(text: 'STATUS'),
@@ -86,15 +88,11 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
           ],
         ),
       ),
-      // O corpo agora é um TabBarView
       body: TabBarView(
         controller: _tabController,
         children: const [
-          // Conteúdo da primeira aba (Conversas)
           ConversasTab(),
-          // Conteúdo da segunda aba (Status)
           Center(child: Text('Tela de Status')),
-          // Conteúdo da terceira aba (Chamadas)
           Center(child: Text('Tela de Chamadas')),
         ],
       ),
@@ -105,13 +103,13 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
             MaterialPageRoute(builder: (context) => const ListaUsuariosScreen()),
           );
         },
-        child: const Icon(Icons.add_comment_rounded),
+        backgroundColor: primaryColor,
+        child: const Icon(Icons.add_comment_rounded, color: Colors.white),
       ),
     );
   }
 }
 
-// Widget para a aba de conversas
 class ConversasTab extends StatelessWidget {
   const ConversasTab({super.key});
 
@@ -133,7 +131,7 @@ class ConversasTab extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
 
         final conversas = snapshot.data!.docs;
-        if (conversas.isEmpty) return const Center(child: Text('Nenhuma conversa encontrada.'));
+        if (conversas.isEmpty) return const Center(child: Text('Nenhuma conversa encontrada. Inicie uma nova!'));
 
         return ListView.builder(
           itemCount: conversas.length,
@@ -154,27 +152,37 @@ class ConversasTab extends StatelessWidget {
                 }
                 
                 final destinatario = userSnapshot.data;
-                final nomeDestinatario = destinatario?.nome ?? 'Contato desconhecido';
+                final nomeDestinatario = destinatario?.nome ?? 'Contato';
+                final inicial = nomeDestinatario.isNotEmpty ? nomeDestinatario[0].toUpperCase() : '?';
 
-                // --- LINHA CORRIGIDA ---
-                final String inicial = nomeDestinatario.isNotEmpty ? nomeDestinatario[0].toUpperCase() : '?';
-
-                return ListTile(
-                  leading: CircleAvatar(child: Text(inicial)),
-                  title: Text(nomeDestinatario),
-                  subtitle: Text(conversaData['ultimaMensagem'] ?? 'Toque para conversar'),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => DetalhesChatScreen(
-                          conversaId: conversaId,
-                          destinatarioNome: nomeDestinatario,
-                          remetenteId: userId,
-                        ),
+                return Column(
+                  children: [
+                    ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: const Color(0xFFB89453).withOpacity(0.2),
+                        child: Text(inicial, style: const TextStyle(color: Color(0xFFB89453), fontWeight: FontWeight.bold)),
                       ),
-                    );
-                  },
+                      title: Text(nomeDestinatario, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text(
+                        conversaData['ultimaMensagem'] ?? 'Toque para conversar',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => DetalhesChatScreen(
+                              conversaId: conversaId,
+                              destinatarioNome: nomeDestinatario,
+                              remetenteId: userId,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const Divider(height: 1, indent: 72, endIndent: 16),
+                  ],
                 );
               },
             );

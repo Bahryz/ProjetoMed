@@ -29,13 +29,17 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
   final ChatService _chatService = ChatService();
   final ScrollController _scrollController = ScrollController();
 
+  // Paleta de cores profissional baseada na tela de login
+  static const Color primaryColor = Color(0xFFB89453);
+  static const Color accentColor = Color(0xFF4A4A4A);
+  static const Color backgroundColor = Color(0xFFF7F7F7);
+  static const Color senderBubbleColor = primaryColor;
+  static const Color receiverBubbleColor = Colors.white;
+
   void _showErrorSnackBar(String message) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text(message), backgroundColor: Colors.red),
       );
     }
   }
@@ -48,12 +52,10 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
         _messageController.text,
       );
       _messageController.clear();
-      _scrollController.animateTo(0,
-          duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+      _scrollController.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
     }
   }
 
-  // REFINEMENT 1: Consolidating file sending logic into one method.
   void _enviarMidia({bool daGaleria = false}) async {
     try {
       final XFile? pickedFile;
@@ -76,9 +78,7 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
       final imageExtensions = ['jpg', 'jpeg', 'png', 'gif'];
       final tipo = imageExtensions.contains(extension) ? 'imagem' : 'arquivo';
 
-      await _chatService.enviarArquivo(
-          widget.conversaId, widget.remetenteId, fileBytes, fileName, tipo);
-
+      await _chatService.enviarArquivo(widget.conversaId, widget.remetenteId, fileBytes, fileName, tipo);
     } catch (e) {
       _showErrorSnackBar('Não foi possível enviar o arquivo.');
     }
@@ -87,36 +87,35 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.destinatarioNome)),
+      backgroundColor: backgroundColor,
+      appBar: AppBar(
+        title: Text(widget.destinatarioNome, style: const TextStyle(color: accentColor, fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        elevation: 1.0,
+        iconTheme: const IconThemeData(color: accentColor),
+      ),
       body: Column(
         children: [
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: _chatService.getMensagensStream(widget.conversaId),
               builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return const Center(child: Text('Erro ao carregar mensagens.'));
-                }
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+                if (snapshot.hasError) return const Center(child: Text('Erro ao carregar mensagens.'));
+                if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
 
                 final mensagens = snapshot.data!.docs;
                 return ListView.builder(
                   controller: _scrollController,
                   reverse: true,
-                  padding: const EdgeInsets.all(8.0),
+                  padding: const EdgeInsets.all(12.0),
                   itemCount: mensagens.length,
                   itemBuilder: (context, index) {
                     final mensagemDoc = mensagens[index];
-                    final mensagemData =
-                        mensagemDoc.data() as Map<String, dynamic>;
-                    final bool isMe =
-                        mensagemData['remetenteId'] == widget.remetenteId;
+                    final mensagemData = mensagemDoc.data() as Map<String, dynamic>;
+                    final bool isMe = mensagemData['remetenteId'] == widget.remetenteId;
 
                     if (!isMe && (mensagemData['statusLeitura'] ?? 'enviado') != 'lido') {
-                      _chatService.marcarComoLida(
-                          widget.conversaId, mensagemDoc.id);
+                      _chatService.marcarComoLida(widget.conversaId, mensagemDoc.id);
                     }
                     return _buildMessageBubble(mensagemData, isMe);
                   },
@@ -135,47 +134,30 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
     final conteudo = mensagem['conteudo'] ?? '';
     final nomeArquivo = mensagem['nomeArquivo'] as String?;
 
+    final bubbleColor = isMe ? senderBubbleColor : receiverBubbleColor;
+    final textColor = isMe ? Colors.white : accentColor;
+    final borderRadius = BorderRadius.only(
+      topLeft: const Radius.circular(20),
+      topRight: const Radius.circular(20),
+      bottomLeft: Radius.circular(isMe ? 20 : 0),
+      bottomRight: Radius.circular(isMe ? 0 : 20),
+    );
+
     Widget conteudoWidget;
     switch (tipo) {
       case 'imagem':
-        // REFINEMENT 2: Making the image widget more robust.
         conteudoWidget = GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ImageViewerScreen(imageUrl: conteudo),
-              ),
-            );
-          },
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ImageViewerScreen(imageUrl: conteudo))),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(12.0),
-            child: Container(
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.6,
-                maxHeight: MediaQuery.of(context).size.width * 0.8,
-              ),
-              child: CachedNetworkImage(
-                imageUrl: conteudo,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  color: Colors.grey[200],
-                  child: const Center(child: CircularProgressIndicator()),
-                ),
-                errorWidget: (context, url, error) {
-                  print("Erro ao carregar imagem: $error"); // For debugging
-                  return Container(
-                    color: Colors.grey[200],
-                    child: const Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.error, color: Colors.red, size: 40),
-                        SizedBox(height: 4),
-                        Text("Falha", style: TextStyle(color: Colors.red)),
-                      ],
-                    ),
-                  );
-                },
+            borderRadius: borderRadius,
+            child: CachedNetworkImage(
+              imageUrl: conteudo,
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Container(height: 200, color: Colors.grey[200], child: const Center(child: CircularProgressIndicator())),
+              errorWidget: (context, url, error) => Container(
+                padding: const EdgeInsets.all(16),
+                color: Colors.grey[200],
+                child: const Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.error, color: Colors.red), SizedBox(height: 8), Text("Falha ao carregar", style: TextStyle(color: Colors.red))]),
               ),
             ),
           ),
@@ -194,100 +176,73 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.insert_drive_file,
-                  color: isMe ? Colors.white70 : Colors.black54),
+              Icon(Icons.insert_drive_file, color: isMe ? Colors.white70 : Colors.black54),
               const SizedBox(width: 8),
-              Flexible(
-                  child: Text(nomeArquivo ?? 'Arquivo',
-                      style: TextStyle(
-                          color: isMe ? Colors.white : Colors.black,
-                          decoration: TextDecoration.underline))),
+              Flexible(child: Text(nomeArquivo ?? 'Arquivo', style: TextStyle(color: textColor, decoration: TextDecoration.underline))),
             ],
           ),
         );
         break;
       default:
-        conteudoWidget = Text(conteudo, style: TextStyle(color: isMe ? Colors.white : Colors.black));
+        conteudoWidget = Text(conteudo, style: TextStyle(color: textColor, fontSize: 16));
     }
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isMe ? Theme.of(context).primaryColor : Colors.grey[300],
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: conteudoWidget, // Simplified this part
+        margin: const EdgeInsets.symmetric(vertical: 5),
+        padding: tipo == 'imagem' ? EdgeInsets.zero : const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        decoration: BoxDecoration(color: bubbleColor, borderRadius: borderRadius, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5, offset: const Offset(0, 2))]),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+        child: conteudoWidget,
       ),
     );
   }
 
   Widget _buildMessageInput() {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(24.0),
-              ),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.attach_file),
-                    onPressed: () {
-                      showModalBottomSheet(
-                        context: context,
-                        builder: (context) => SafeArea(
-                          child: Wrap(
-                            children: <Widget>[
-                              ListTile(
-                                leading: const Icon(Icons.photo_library),
-                                title: const Text('Enviar Imagem da Galeria'),
-                                onTap: () {
-                                  Navigator.of(context).pop();
-                                  _enviarMidia(daGaleria: true);
-                                },
-                              ),
-                              ListTile(
-                                leading: const Icon(Icons.insert_drive_file),
-                                title: const Text('Enviar Documento'),
-                                onTap: () {
-                                  Navigator.of(context).pop();
-                                  _enviarMidia(daGaleria: false);
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
+    return Container(
+      decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, -5))]),
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+      child: SafeArea(
+        child: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.attach_file, color: accentColor),
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  builder: (context) => Wrap(
+                    children: <Widget>[
+                      ListTile(leading: const Icon(Icons.photo_library), title: const Text('Enviar Imagem'), onTap: () {Navigator.of(context).pop(); _enviarMidia(daGaleria: true);}),
+                      ListTile(leading: const Icon(Icons.insert_drive_file), title: const Text('Enviar Documento'), onTap: () {Navigator.of(context).pop(); _enviarMidia(daGaleria: false);}),
+                    ],
                   ),
-                  Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      decoration: const InputDecoration(
-                        hintText: 'Digite uma mensagem...',
-                        border: InputBorder.none,
-                      ),
-                      onSubmitted: (value) => _enviarMensagem(),
-                    ),
-                  ),
-                ],
+                );
+              },
+            ),
+            Expanded(
+              child: TextField(
+                controller: _messageController,
+                decoration: InputDecoration(
+                  hintText: 'Digite uma mensagem...',
+                  filled: true,
+                  fillColor: Colors.grey[100],
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(30.0), borderSide: BorderSide.none),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+                ),
+                onSubmitted: (value) => _enviarMensagem(),
               ),
             ),
-          ),
-          const SizedBox(width: 8.0),
-          FloatingActionButton(
-            mini: true,
-            onPressed: _enviarMensagem,
-            child: const Icon(Icons.send),
-          )
-        ],
+            const SizedBox(width: 8.0),
+            FloatingActionButton(
+              mini: true,
+              onPressed: _enviarMensagem,
+              backgroundColor: primaryColor,
+              elevation: 0,
+              child: const Icon(Icons.send, color: Colors.white),
+            )
+          ],
+        ),
       ),
     );
   }
