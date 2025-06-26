@@ -6,10 +6,6 @@ import 'package:provider/provider.dart';
 import 'package:medico_app/features/authentication/data/models/app_user.dart';
 import '../controllers/auth_controller.dart';
 
-/// Tela de cadastro para usuários do tipo "Paciente".
-///
-/// Coleta as informações básicas do paciente, como nome, e-mail,
-/// CPF e telefone, além de uma senha para a criação da conta.
 class RegisterPacienteScreen extends StatefulWidget {
   const RegisterPacienteScreen({super.key});
 
@@ -26,24 +22,62 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
   final _confirmPasswordController = TextEditingController();
   String? _fullPhoneNumber;
 
-  /// Formata o campo de texto para o padrão de CPF brasileiro.
+  bool _isPasswordObscured = true;
+  bool _isConfirmPasswordObscured = true;
+  double _passwordStrength = 0;
+
   final _cpfFormatter = MaskTextInputFormatter(
       mask: '###.###.###-##', filter: {"#": RegExp(r'[0-9]')});
+
+  @override
+  void initState() {
+    super.initState();
+    _passwordController.addListener(_updatePasswordStrength);
+  }
 
   @override
   void dispose() {
     _nomeController.dispose();
     _emailController.dispose();
     _cpfController.dispose();
+    _passwordController.removeListener(_updatePasswordStrength);
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  /// Valida o formulário e submete os dados de registro.
-  ///
-  /// Cria um objeto [AppUser] com os dados do paciente e chama o
-  /// [AuthController] para processar o registro.
+  void _updatePasswordStrength() {
+    String password = _passwordController.text;
+    setState(() {
+      _passwordStrength = _checkPasswordStrength(password);
+    });
+  }
+
+  double _checkPasswordStrength(String password) {
+    if (password.isEmpty) return 0;
+    double strength = 0;
+    if (password.length >= 8) strength += 0.25;
+    if (RegExp(r'[A-Z]').hasMatch(password)) strength += 0.25;
+    if (RegExp(r'[a-z]').hasMatch(password)) strength += 0.25;
+    if (RegExp(r'[0-9]').hasMatch(password)) strength += 0.25;
+    if (RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password)) strength += 0.25;
+    return strength > 1.0 ? 1.0 : strength;
+  }
+
+  Color _getStrengthColor(double strength) {
+    if (strength < 0.5) return Colors.red;
+    if (strength < 0.75) return Colors.orange;
+    return Colors.green;
+  }
+
+  String _getStrengthText(double strength) {
+    if (strength == 0) return '';
+    if (strength < 0.5) return 'Fraca';
+    if (strength < 0.75) return 'Média';
+    if (strength < 1.0) return 'Forte';
+    return 'Muito Forte';
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -58,6 +92,7 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
       telefone: _fullPhoneNumber,
       userType: 'paciente',
       crm: null,
+      status: 'aprovado',
     );
 
     await authController.handleRegister(appUser, _passwordController.text);
@@ -81,7 +116,7 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        automaticallyImplyLeading: false, 
+        automaticallyImplyLeading: false,
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -119,7 +154,8 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                             labelText: 'Nome Completo',
                             prefixIcon: const Icon(Icons.person_outline),
                           ),
-                          validator: (v) => (v?.isEmpty ?? true) ? 'Campo obrigatório' : null,
+                          validator: (v) =>
+                              (v?.isEmpty ?? true) ? 'Campo obrigatório' : null,
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
@@ -131,7 +167,8 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                           keyboardType: TextInputType.emailAddress,
                           validator: (v) {
                             if (v?.isEmpty ?? true) return 'Campo obrigatório';
-                            if (!v!.contains('@') || !v.contains('.')) return 'Email inválido';
+                            if (!v!.contains('@') || !v.contains('.'))
+                              return 'Email inválido';
                             return null;
                           },
                         ),
@@ -158,35 +195,84 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                           inputFormatters: [_cpfFormatter],
                           validator: (v) {
                             if (v?.isEmpty ?? true) return 'Campo obrigatório';
-                            if (_cpfFormatter.getUnmaskedText().length != 11) return 'CPF inválido';
+                            if (_cpfFormatter.getUnmaskedText().length != 11)
+                              return 'CPF inválido';
                             return null;
                           },
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _passwordController,
+                          obscureText: _isPasswordObscured,
                           decoration: inputDecoration.copyWith(
                             labelText: 'Senha',
                             prefixIcon: const Icon(Icons.lock_outline),
+                            suffixIcon: IconButton(
+                              icon: Icon(_isPasswordObscured
+                                  ? Icons.visibility_off
+                                  : Icons.visibility),
+                              onPressed: () {
+                                setState(() {
+                                  _isPasswordObscured = !_isPasswordObscured;
+                                });
+                              },
+                            ),
                           ),
-                          obscureText: true,
-                            validator: (v) {
-                            if (v?.isEmpty ?? true) return 'Campo obrigatório';
-                            if (v!.length < 6) return 'Senha deve ter no mínimo 6 caracteres';
+                          validator: (v) {
+                            if (v == null || v.isEmpty) {
+                              return 'Campo obrigatório';
+                            }
+                            if (_checkPasswordStrength(v) < 1.0) {
+                              return 'A senha deve conter maiúscula, minúscula, número e símbolo.';
+                            }
                             return null;
                           },
                         ),
+                        const SizedBox(height: 8),
+                        if (_passwordController.text.isNotEmpty)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              LinearProgressIndicator(
+                                value: _passwordStrength,
+                                backgroundColor: Colors.grey[300],
+                                minHeight: 6,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    _getStrengthColor(_passwordStrength)),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _getStrengthText(_passwordStrength),
+                                style: TextStyle(
+                                  color: _getStrengthColor(_passwordStrength),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _confirmPasswordController,
+                          obscureText: _isConfirmPasswordObscured,
                           decoration: inputDecoration.copyWith(
                             labelText: 'Confirmar Senha',
                             prefixIcon: const Icon(Icons.lock_outline),
+                            suffixIcon: IconButton(
+                              icon: Icon(_isConfirmPasswordObscured
+                                  ? Icons.visibility_off
+                                  : Icons.visibility),
+                              onPressed: () {
+                                setState(() {
+                                  _isConfirmPasswordObscured =
+                                      !_isConfirmPasswordObscured;
+                                });
+                              },
+                            ),
                           ),
-                          obscureText: true,
                           validator: (v) {
-                              if (v?.isEmpty ?? true) return 'Campo obrigatório';
-                            if (v != _passwordController.text) return 'As senhas não coincidem';
+                            if (v?.isEmpty ?? true) return 'Campo obrigatório';
+                            if (v != _passwordController.text)
+                              return 'As senhas não coincidem';
                             return null;
                           },
                         ),
@@ -196,7 +282,8 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                             : ElevatedButton(
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: primaryColor,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -204,7 +291,8 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                                 onPressed: _submit,
                                 child: const Text(
                                   'Cadastrar',
-                                  style: TextStyle(fontSize: 16, color: Colors.white),
+                                  style: TextStyle(
+                                      fontSize: 16, color: Colors.white),
                                 ),
                               ),
                       ],
@@ -216,7 +304,8 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
               TextButton(
                 onPressed: () => context.go('/login'),
                 style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                     side: BorderSide(color: primaryColor.withAlpha(77)),
@@ -225,7 +314,8 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.arrow_back_ios_new, size: 16, color: primaryColor.withAlpha(204)),
+                    Icon(Icons.arrow_back_ios_new,
+                        size: 16, color: primaryColor.withAlpha(204)),
                     const SizedBox(width: 8),
                     const Text(
                       'Voltar para o Login',
@@ -239,13 +329,13 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                 ),
               ),
               if (authController.errorMessage != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    authController.errorMessage!,
-                    style: const TextStyle(color: Colors.red, fontSize: 14),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                const SizedBox(height: 8),
+                Text(
+                  authController.errorMessage!,
+                  style: const TextStyle(color: Colors.red, fontSize: 14),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ],
           ),
         ),

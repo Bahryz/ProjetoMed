@@ -8,7 +8,7 @@ import 'package:medico_app/features/authentication/presentation/screens/chat_scr
 import 'package:medico_app/features/authentication/presentation/screens/login_screen.dart'; 
 import 'package:medico_app/features/authentication/presentation/screens/otp_verify_screen.dart';
 import 'package:medico_app/features/authentication/presentation/screens/welcome_screen.dart';
- import 'package:medico_app/features/authentication/presentation/screens/pending_approval_screen.dart';
+import 'package:medico_app/features/authentication/presentation/screens/pending_approval_screen.dart';
 import 'package:medico_app/features/authentication/presentation/screens/two_factor_auth_screen.dart';
 import 'package:medico_app/features/authentication/data/models/app_user.dart';
 
