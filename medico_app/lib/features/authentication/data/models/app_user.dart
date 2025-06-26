@@ -1,69 +1,72 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class AppUser {
   final String uid;
-  final String? nome;
+  final String nome;
   final String? email;
-  final String? telefone;
-  final String? cpf;
   final String? crm;
+  final String? telefone;
   final String userType;
-  final String? status; // Campo adicionado para verificação
+  final String? cpf;
+  final String? status;
 
   AppUser({
     required this.uid,
-    this.nome,
+    required this.nome,
     this.email,
-    this.telefone,
-    this.cpf,
     this.crm,
+    this.telefone,
     required this.userType,
-    this.status, // Adicionado ao construtor
+    this.cpf,
+    this.status,
   });
-
-  factory AppUser.fromMap(Map<String, dynamic> map) {
-    return AppUser(
-      uid: map['uid'] ?? '',
-      nome: map['nome'],
-      email: map['email'],
-      telefone: map['telefone'],
-      cpf: map['cpf'],
-      crm: map['crm'],
-      userType: map['userType'] ?? 'paciente',
-      status: map['status'], // Adicionado ao fromMap
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'uid': uid,
-      'nome': nome,
-      'email': email,
-      'telefone': telefone,
-      'cpf': cpf,
-      'crm': crm,
-      'userType': userType,
-      'status': status, // Adicionado ao toMap
-    };
-  }
 
   AppUser copyWith({
     String? uid,
     String? nome,
     String? email,
-    String? telefone,
-    String? cpf,
     String? crm,
+    String? telefone,
     String? userType,
-    String? status, // Adicionado ao copyWith
+    String? cpf,
+    String? status,
   }) {
     return AppUser(
       uid: uid ?? this.uid,
       nome: nome ?? this.nome,
       email: email ?? this.email,
-      telefone: telefone ?? this.telefone,
-      cpf: cpf ?? this.cpf,
       crm: crm ?? this.crm,
+      telefone: telefone ?? this.telefone,
       userType: userType ?? this.userType,
-      status: status ?? this.status, // Adicionado ao copyWith
+      cpf: cpf ?? this.cpf,
+      status: status ?? this.status,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'uid': uid,
+      'nome': nome,
+      'email': email,
+      'crm': crm,
+      'telefone': telefone,
+      'userType': userType,
+      'cpf': cpf,
+      'status': status,
+    };
+  }
+
+  factory AppUser.fromDocumentSnapshot(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+    return AppUser(
+      uid: doc.id,
+      nome: data['nome'] ?? '',
+      email: data['email'],
+      crm: data['crm'],
+      telefone: data['telefone'],
+      userType: data['userType'] ?? 'paciente',
+      cpf: data['cpf'],
+      status: data['status'],
     );
   }
 }
