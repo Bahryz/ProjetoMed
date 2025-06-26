@@ -5,7 +5,7 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0' # É uma boa prática definir um range
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
@@ -21,15 +21,18 @@ dependencies:
   firebase_analytics: ^11.4.6
   firebase_auth: ^5.5.4
   cloud_firestore: ^5.6.8
-  firebase_storage: ^12.1.0 #
+  firebase_storage: ^12.1.0
   
   # Formatação de campos
   mask_text_input_formatter: ^2.9.0
   intl_phone_field: ^3.2.0
 
-   # Para selecionar arquivos e imagens
+  # Para selecionar arquivos e imagens
   image_picker: ^1.1.2
   file_picker: ^8.0.3
+
+  # Para abrir URLs (documentos, etc.)
+  url_launcher: ^6.2.6
 
   # Para tocar áudios
   audioplayers: ^6.0.0

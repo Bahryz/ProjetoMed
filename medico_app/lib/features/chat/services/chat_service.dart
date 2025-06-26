@@ -1,15 +1,14 @@
-// lib/features/chat/services/chat_service.dart
-
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 
 class ChatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  Future<String> getOrCreateConversation(String currentUserId, String otherUserId) async {
-    // Um ID de conversa único combinando os IDs dos usuários em ordem
+  Future<String> getOrCreateConversation(
+      String currentUserId, String otherUserId) async {
     List<String> userIds = [currentUserId, otherUserId];
     userIds.sort();
     String conversaId = userIds.join('_');
@@ -18,7 +17,6 @@ class ChatService {
     final docSnapshot = await conversationRef.get();
 
     if (!docSnapshot.exists) {
-      // A conversa não existe, vamos criá-la
       await conversationRef.set({
         'participantes': [currentUserId, otherUserId],
         'timestampUltimaMensagem': FieldValue.serverTimestamp(),
@@ -28,7 +26,6 @@ class ChatService {
     return conversaId;
   }
 
-  // Obter stream de conversas de um usuário
   Stream<QuerySnapshot> getConversasStream(String userId) {
     return _firestore
         .collection('conversas')
@@ -37,7 +34,6 @@ class ChatService {
         .snapshots();
   }
 
-  // Obter stream de mensagens de uma conversa específica
   Stream<QuerySnapshot> getMensagensStream(String conversaId) {
     return _firestore
         .collection('conversas')
@@ -47,11 +43,12 @@ class ChatService {
         .snapshots();
   }
 
-  // Enviar uma mensagem de texto
-  Future<void> enviarMensagem(String conversaId, String remetenteId, String texto) async {
+  Future<void> enviarMensagem(
+      String conversaId, String remetenteId, String texto) async {
     if (texto.trim().isEmpty) return;
 
-    final messagesRef = _firestore.collection('conversas').doc(conversaId).collection('mensagens');
+    final messagesRef =
+        _firestore.collection('conversas').doc(conversaId).collection('mensagens');
     final conversationRef = _firestore.collection('conversas').doc(conversaId);
 
     await messagesRef.add({
@@ -62,43 +59,52 @@ class ChatService {
       'statusLeitura': 'enviado',
     });
 
-    // Atualizar a última mensagem na conversa para facilitar a listagem
     await conversationRef.update({
       'ultimaMensagem': texto,
       'timestampUltimaMensagem': FieldValue.serverTimestamp(),
     });
   }
 
-  // Enviar um arquivo (imagem, áudio, etc.)
-  Future<void> enviarArquivo(String conversaId, String remetenteId, File arquivo, String tipo) async {
-    // 1. Criar caminho no Firebase Storage
-    final fileName = '${DateTime.now().millisecondsSinceEpoch}_${arquivo.path.split('/').last}';
-    final path = 'chat_media/$conversaId/$fileName';
-    final ref = _storage.ref(path);
+  Future<void> enviarArquivo(
+    String conversaId,
+    String remetenteId,
+    Uint8List fileBytes,
+    String nomeArquivo,
+    String tipo,
+  ) async {
+    try {
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}_$nomeArquivo';
+      final path = 'chat_media/$conversaId/$fileName';
+      final ref = _storage.ref(path);
 
-    // 2. Fazer upload do arquivo
-    final uploadTask = ref.putFile(arquivo);
-    final snapshot = await uploadTask.whenComplete(() => {});
-    final downloadUrl = await snapshot.ref.getDownloadURL();
+      final uploadTask = ref.putData(fileBytes);
 
-    // 3. Salvar a mensagem no Firestore com a URL do arquivo
-    final messagesRef = _firestore.collection('conversas').doc(conversaId).collection('mensagens');
-    await messagesRef.add({
-      'remetenteId': remetenteId,
-      'tipo': tipo, // "imagem", "audio", "arquivo"
-      'conteudo': downloadUrl,
-      'timestamp': FieldValue.serverTimestamp(),
-      'statusLeitura': 'enviado',
-    });
-    
-    // 4. Atualizar última mensagem
-     await _firestore.collection('conversas').doc(conversaId).update({
-      'ultimaMensagem': tipo == 'imagem' ? '📷 Foto' : (tipo == 'audio' ? '🎤 Áudio' : '📄 Arquivo'),
-      'timestampUltimaMensagem': FieldValue.serverTimestamp(),
-    });
+      final snapshot = await uploadTask.whenComplete(() => {});
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+
+      final messagesRef = _firestore
+          .collection('conversas')
+          .doc(conversaId)
+          .collection('mensagens');
+      await messagesRef.add({
+        'remetenteId': remetenteId,
+        'tipo': tipo,
+        'conteudo': downloadUrl,
+        'nomeArquivo': nomeArquivo,
+        'timestamp': FieldValue.serverTimestamp(),
+        'statusLeitura': 'enviado',
+      });
+
+      await _firestore.collection('conversas').doc(conversaId).update({
+        'ultimaMensagem': tipo == 'imagem' ? '📷 Foto' : '📄 $nomeArquivo',
+        'timestampUltimaMensagem': FieldValue.serverTimestamp(),
+      });
+    } on FirebaseException catch (e) {
+      debugPrint("Erro no upload do arquivo: ${e.code} - ${e.message}");
+      throw Exception('Falha ao enviar o arquivo.');
+    }
   }
 
-  // Marcar mensagens como lidas
   Future<void> marcarComoLida(String conversaId, String mensagemId) async {
     await _firestore
         .collection('conversas')
