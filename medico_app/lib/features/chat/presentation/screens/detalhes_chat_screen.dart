@@ -8,8 +8,6 @@ import 'package:medico_app/features/chat/services/chat_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-
-
 class DetalhesChatScreen extends StatefulWidget {
   final String conversaId;
   final String destinatarioNome;
@@ -55,44 +53,32 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
     }
   }
 
-  void _enviarImagem() async {
+  // REFINEMENT 1: Consolidating file sending logic into one method.
+  void _enviarMidia({bool daGaleria = false}) async {
     try {
-      final picker = ImagePicker();
-      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-      if (pickedFile != null) {
-        final Uint8List fileBytes = await pickedFile.readAsBytes();
-        final String fileName = pickedFile.name;
+      final XFile? pickedFile;
+      Uint8List? fileBytes;
+      String? fileName;
 
-        await _chatService.enviarArquivo(
-            widget.conversaId, widget.remetenteId, fileBytes, fileName, 'imagem');
+      if (daGaleria) {
+        pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+        if (pickedFile == null) return;
+        fileBytes = await pickedFile.readAsBytes();
+        fileName = pickedFile.name;
+      } else {
+        final result = await FilePicker.platform.pickFiles(type: FileType.any);
+        if (result == null || result.files.single.bytes == null) return;
+        fileBytes = result.files.single.bytes!;
+        fileName = result.files.single.name;
       }
-    } catch (e) {
-      _showErrorSnackBar('Não foi possível enviar a imagem.');
-    }
-  }
 
-  void _enviarArquivo() async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'],
-      );
+      final extension = fileName.split('.').last.toLowerCase();
+      final imageExtensions = ['jpg', 'jpeg', 'png', 'gif'];
+      final tipo = imageExtensions.contains(extension) ? 'imagem' : 'arquivo';
 
-      if (result != null && result.files.single.bytes != null) {
-        final file = result.files.single;
-        final Uint8List fileBytes = file.bytes!;
-        final String fileName = file.name;
-        final String? extension = file.extension?.toLowerCase();
+      await _chatService.enviarArquivo(
+          widget.conversaId, widget.remetenteId, fileBytes, fileName, tipo);
 
-        final imageExtensions = ['jpg', 'jpeg', 'png'];
-        String tipo = 'arquivo';
-        if (extension != null && imageExtensions.contains(extension)) {
-          tipo = 'imagem';
-        }
-
-        await _chatService.enviarArquivo(
-            widget.conversaId, widget.remetenteId, fileBytes, fileName, tipo);
-      }
     } catch (e) {
       _showErrorSnackBar('Não foi possível enviar o arquivo.');
     }
@@ -128,7 +114,7 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
                     final bool isMe =
                         mensagemData['remetenteId'] == widget.remetenteId;
 
-                    if (!isMe && mensagemData['statusLeitura'] != 'lido') {
+                    if (!isMe && (mensagemData['statusLeitura'] ?? 'enviado') != 'lido') {
                       _chatService.marcarComoLida(
                           widget.conversaId, mensagemDoc.id);
                     }
@@ -145,7 +131,6 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
   }
 
   Widget _buildMessageBubble(Map<String, dynamic> mensagem, bool isMe) {
-    final status = mensagem['statusLeitura'];
     final tipo = mensagem['tipo'] ?? 'texto';
     final conteudo = mensagem['conteudo'] ?? '';
     final nomeArquivo = mensagem['nomeArquivo'] as String?;
@@ -153,6 +138,7 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
     Widget conteudoWidget;
     switch (tipo) {
       case 'imagem':
+        // REFINEMENT 2: Making the image widget more robust.
         conteudoWidget = GestureDetector(
           onTap: () {
             Navigator.push(
@@ -169,7 +155,6 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
                 maxWidth: MediaQuery.of(context).size.width * 0.6,
                 maxHeight: MediaQuery.of(context).size.width * 0.8,
               ),
-              // ATUALIZAÇÃO: Usando CachedNetworkImage para a miniatura
               child: CachedNetworkImage(
                 imageUrl: conteudo,
                 fit: BoxFit.cover,
@@ -177,10 +162,20 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
                   color: Colors.grey[200],
                   child: const Center(child: CircularProgressIndicator()),
                 ),
-                errorWidget: (context, url, error) => Container(
-                  color: Colors.grey[200],
-                  child: const Icon(Icons.broken_image, size: 40),
-                ),
+                errorWidget: (context, url, error) {
+                  print("Erro ao carregar imagem: $error"); // For debugging
+                  return Container(
+                    color: Colors.grey[200],
+                    child: const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error, color: Colors.red, size: 40),
+                        SizedBox(height: 4),
+                        Text("Falha", style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
           ),
@@ -200,33 +195,19 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(Icons.insert_drive_file,
-                  color: isMe ? Colors.black54 : Colors.black87),
+                  color: isMe ? Colors.white70 : Colors.black54),
               const SizedBox(width: 8),
               Flexible(
                   child: Text(nomeArquivo ?? 'Arquivo',
-                      style:
-                          const TextStyle(decoration: TextDecoration.underline))),
+                      style: TextStyle(
+                          color: isMe ? Colors.white : Colors.black,
+                          decoration: TextDecoration.underline))),
             ],
           ),
         );
         break;
       default:
-        conteudoWidget = Text(conteudo);
-    }
-
-    Icon? statusIcon;
-    if (isMe) {
-      switch (status) {
-        case 'lido':
-          statusIcon =
-              const Icon(Icons.done_all, color: Colors.blue, size: 16);
-          break;
-        case 'entregue':
-          statusIcon = const Icon(Icons.done_all, color: Colors.grey, size: 16);
-          break;
-        default:
-          statusIcon = const Icon(Icons.done, color: Colors.grey, size: 16);
-      }
+        conteudoWidget = Text(conteudo, style: TextStyle(color: isMe ? Colors.white : Colors.black));
     }
 
     return Align(
@@ -235,20 +216,10 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isMe ? Colors.blue[100] : Colors.grey[300],
+          color: isMe ? Theme.of(context).primaryColor : Colors.grey[300],
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Column(
-          crossAxisAlignment:
-              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-          children: [
-            conteudoWidget,
-            if (isMe && statusIcon != null) ...[
-              const SizedBox(height: 4),
-              statusIcon,
-            ]
-          ],
-        ),
+        child: conteudoWidget, // Simplified this part
       ),
     );
   }
@@ -276,10 +247,10 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
                             children: <Widget>[
                               ListTile(
                                 leading: const Icon(Icons.photo_library),
-                                title: const Text('Enviar Imagem'),
+                                title: const Text('Enviar Imagem da Galeria'),
                                 onTap: () {
                                   Navigator.of(context).pop();
-                                  _enviarImagem();
+                                  _enviarMidia(daGaleria: true);
                                 },
                               ),
                               ListTile(
@@ -287,7 +258,7 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
                                 title: const Text('Enviar Documento'),
                                 onTap: () {
                                   Navigator.of(context).pop();
-                                  _enviarArquivo();
+                                  _enviarMidia(daGaleria: false);
                                 },
                               ),
                             ],
