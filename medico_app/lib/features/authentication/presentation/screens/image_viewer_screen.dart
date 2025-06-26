@@ -1,10 +1,48 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:dio/dio.dart';
+import 'package:gallery_saver/gallery_saver.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ImageViewerScreen extends StatelessWidget {
   final String imageUrl;
 
-  const ImageViewerScreen({Key? key, required this.imageUrl}) : super(key: key);
+  const ImageViewerScreen({super.key, required this.imageUrl});
+
+  // Função para salvar a imagem
+  Future<void> _saveImage(BuildContext context) async {
+    // Exibe uma snackbar de feedback
+    _showSnackBar(String message, {bool isError = false}) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: isError ? Colors.red : Colors.green,
+          ),
+        );
+      }
+    }
+
+    try {
+      if (kIsWeb) {
+        // Na web, abre a imagem em uma nova aba para o usuário salvar manualmente
+        final uri = Uri.tryParse(imageUrl);
+        if (uri != null && await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          throw Exception('Não foi possível abrir a URL da imagem.');
+        }
+      } else {
+        // Em mobile (Android/iOS), salva diretamente na galeria
+        await GallerySaver.saveImage(imageUrl);
+        _showSnackBar('Imagem salva na galeria com sucesso!');
+      }
+    } catch (e) {
+      debugPrint("Erro ao salvar imagem: $e");
+      _showSnackBar('Erro ao salvar a imagem.', isError: true);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,15 +53,11 @@ class ImageViewerScreen extends StatelessWidget {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
-          // Adiciona um botão de download (opcional, mas profissional)
+          // Botão de Download
           IconButton(
-            icon: const Icon(Icons.download),
-            onPressed: () {
-              // Aqui você pode adicionar a lógica para salvar a imagem na galeria
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Funcionalidade de download a ser implementada.')),
-              );
-            },
+            icon: const Icon(Icons.download_rounded),
+            onPressed: () => _saveImage(context),
+            tooltip: 'Salvar imagem',
           ),
         ],
       ),
@@ -32,24 +66,10 @@ class ImageViewerScreen extends StatelessWidget {
           panEnabled: true,
           minScale: 0.5,
           maxScale: 4,
-          // ATUALIZAÇÃO: Usando CachedNetworkImage para performance e caching
           child: CachedNetworkImage(
             imageUrl: imageUrl,
-            fit: BoxFit.contain, // Garante que a imagem inteira seja visível
-            // Widget a ser exibido enquanto a imagem está carregando
-            placeholder: (context, url) => Center(
-              child: CircularProgressIndicator(
-                valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-              ),
-            ),
-            // Widget a ser exibido se ocorrer um erro ao carregar a imagem
-            errorWidget: (context, url, error) => const Center(
-              child: Icon(
-                Icons.image_not_supported_outlined, // Ícone mais apropriado
-                color: Colors.white,
-                size: 50.0,
-              ),
-            ),
+            placeholder: (context, url) => const Center(child: CircularProgressIndicator(color: Colors.white)),
+            errorWidget: (context, url, error) => const Icon(Icons.error, color: Colors.white, size: 50),
           ),
         ),
       ),

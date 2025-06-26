@@ -6,7 +6,8 @@ import 'package:medico_app/core/utils/exceptions.dart';
 import 'package:medico_app/features/authentication/data/models/app_user.dart';
 import 'package:medico_app/features/authentication/data/repositories/auth_repository.dart';
 
-enum AuthStatus { unknown, authenticated, unauthenticated }
+// 1. ADICIONADO NOVO STATUS PARA CONTROLE DE APROVAÇÃO
+enum AuthStatus { unknown, authenticated, unauthenticated, pendingApproval }
 
 class AuthController with ChangeNotifier {
   final AuthRepository _repository;
@@ -32,6 +33,8 @@ class AuthController with ChangeNotifier {
 
   bool _requiresTwoFactor = false;
 
+  // 2. LÓGICA DE VERIFICAÇÃO CENTRALIZADA
+  /// Este método agora verifica o status do médico e define o AuthStatus apropriado.
   Future<void> _onAuthStateChanged(User? user) async {
     if (user == null) {
       _status = AuthStatus.unauthenticated;
@@ -39,12 +42,23 @@ class AuthController with ChangeNotifier {
       appUser = null;
       _requiresTwoFactor = false;
     } else {
+      // Se não estivermos no meio de um fluxo de 2FA, verifique o status.
       if (!_requiresTwoFactor) {
-        _status = AuthStatus.authenticated;
-        _user = user;
         final profileData = await _repository.getUserProfile(user.uid);
         if (profileData != null) {
           appUser = AppUser.fromMap(profileData);
+          _user = user;
+
+          // Se for médico, verifique o status de aprovação.
+          if (appUser!.userType == 'medico' && appUser!.status != 'aprovado') {
+            _status = AuthStatus.pendingApproval;
+          } else {
+            _status = AuthStatus.authenticated;
+          }
+        } else {
+          // Perfil não encontrado, deslogar para evitar estado inconsistente.
+          await handleLogout();
+          _errorMessage = "Perfil de usuário não encontrado.";
         }
       }
     }
@@ -76,24 +90,36 @@ class AuthController with ChangeNotifier {
   }
 
   Future<void> handleRegister(AppUser userData, String password) async {
+    // Após o registro, _onAuthStateChanged será chamado e fará a verificação de status.
     await _handleAuthRequest(() => _repository.registerUser(userData, password));
   }
 
-   Future<void> handleLogin(BuildContext context, String email, String password) async {
+  // 3. LÓGICA DE LOGIN AJUSTADA
+  /// O método agora checa o status do médico antes de iniciar o fluxo de 2FA.
+  Future<void> handleLogin(BuildContext context, String email, String password) async {
     await _handleAuthRequest(() async {
-       await _repository.signIn(email, password);
-
-       final currentUser = _repository.currentUser;
+      await _repository.signIn(email, password);
+      final currentUser = _repository.currentUser;
       if (currentUser != null) {
-         final userProfileMap = await _repository.getUserProfile(currentUser.uid);
+        final userProfileMap = await _repository.getUserProfile(currentUser.uid);
         if (userProfileMap != null) {
           final userDetails = AppUser.fromMap(userProfileMap);
-          _requiresTwoFactor = true; // Ativa a flag de 2FA
+          
+          // Se for um médico pendente, o _onAuthStateChanged já terá definido o
+          // status como pendingApproval. O router deve tratar o redirecionamento.
+          // Aqui, apenas evitamos o fluxo de 2FA para ele.
+          if (userDetails.userType == 'medico' && userDetails.status != 'aprovado') {
+             _onAuthStateChanged(currentUser); // Força a atualização de estado
+             return; // Interrompe o fluxo para 2FA
+          }
+
+          // Para pacientes ou médicos aprovados, inicia o fluxo de 2FA.
+          _requiresTwoFactor = true;
           if (context.mounted) {
             context.go('/two-factor-auth', extra: userDetails);
           }
         } else {
-           await handleLogout();
+          await handleLogout();
           throw AuthException("Perfil do usuário não encontrado no banco de dados.");
         }
       } else {
@@ -137,7 +163,7 @@ class AuthController with ChangeNotifier {
     await _handleAuthRequest(() async {
       await _repository.signInWithSmsCode(verificationId, smsCode);
       _requiresTwoFactor = false;
-      _onAuthStateChanged(_repository.currentUser);
+      _onAuthStateChanged(_repository.currentUser); // Reavalia o estado de auth
     });
   }
 

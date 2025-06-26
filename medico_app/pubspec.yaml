@@ -17,7 +17,7 @@ dependencies:
   provider: ^6.1.5
   cached_network_image: ^3.3.1
   mime: ^1.0.5
-  
+
   # Firebase
   firebase_core: ^3.13.1
   firebase_analytics: ^11.4.6
@@ -38,6 +38,8 @@ dependencies:
 
   # Para tocar áudios
   audioplayers: ^6.0.0
+  gallery_saver: ^2.3.2
+  dio: ^5.4.3+1 
   
   # Para gravar áudios
   record: ^5.0.5

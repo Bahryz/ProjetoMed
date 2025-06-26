@@ -6,6 +6,7 @@ class AppUser {
   final String? cpf;
   final String? crm;
   final String userType;
+  final String? status; // Campo adicionado para verificação
 
   AppUser({
     required this.uid,
@@ -15,6 +16,7 @@ class AppUser {
     this.cpf,
     this.crm,
     required this.userType,
+    this.status, // Adicionado ao construtor
   });
 
   factory AppUser.fromMap(Map<String, dynamic> map) {
@@ -26,6 +28,7 @@ class AppUser {
       cpf: map['cpf'],
       crm: map['crm'],
       userType: map['userType'] ?? 'paciente',
+      status: map['status'], // Adicionado ao fromMap
     );
   }
 
@@ -38,6 +41,7 @@ class AppUser {
       'cpf': cpf,
       'crm': crm,
       'userType': userType,
+      'status': status, // Adicionado ao toMap
     };
   }
 
@@ -49,6 +53,7 @@ class AppUser {
     String? cpf,
     String? crm,
     String? userType,
+    String? status, // Adicionado ao copyWith
   }) {
     return AppUser(
       uid: uid ?? this.uid,
@@ -58,6 +63,7 @@ class AppUser {
       cpf: cpf ?? this.cpf,
       crm: crm ?? this.crm,
       userType: userType ?? this.userType,
+      status: status ?? this.status, // Adicionado ao copyWith
     );
   }
 }

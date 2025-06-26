@@ -63,6 +63,7 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
       telefone: _fullPhoneNumber,
       userType: 'medico',
       cpf: null,
+      status: 'pendente', // Status inicial definido para verificação
     );
 
     await authController.handleRegister(appUser, _passwordController.text);
