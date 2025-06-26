@@ -3,8 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:medico_app/features/authentication/presentation/screens/image_viewer_screen.dart';
 import 'package:medico_app/features/chat/services/chat_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+
+
 
 class DetalhesChatScreen extends StatefulWidget {
   final String conversaId;
@@ -71,14 +75,23 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'png'],
+        allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'],
       );
+
       if (result != null && result.files.single.bytes != null) {
-        final Uint8List fileBytes = result.files.single.bytes!;
-        final String fileName = result.files.single.name;
+        final file = result.files.single;
+        final Uint8List fileBytes = file.bytes!;
+        final String fileName = file.name;
+        final String? extension = file.extension?.toLowerCase();
+
+        final imageExtensions = ['jpg', 'jpeg', 'png'];
+        String tipo = 'arquivo';
+        if (extension != null && imageExtensions.contains(extension)) {
+          tipo = 'imagem';
+        }
 
         await _chatService.enviarArquivo(
-            widget.conversaId, widget.remetenteId, fileBytes, fileName, 'arquivo');
+            widget.conversaId, widget.remetenteId, fileBytes, fileName, tipo);
       }
     } catch (e) {
       _showErrorSnackBar('Não foi possível enviar o arquivo.');
@@ -140,21 +153,36 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
     Widget conteudoWidget;
     switch (tipo) {
       case 'imagem':
-        conteudoWidget = Container(
-          constraints:
-              BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.6),
+        conteudoWidget = GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ImageViewerScreen(imageUrl: conteudo),
+              ),
+            );
+          },
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(8.0),
-            child: Image.network(conteudo, fit: BoxFit.cover,
-                loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) return child;
-              return const Padding(
-                padding: EdgeInsets.all(32.0),
-                child: CircularProgressIndicator(),
-              );
-            }, errorBuilder: (context, error, stackTrace) {
-              return const Icon(Icons.broken_image, size: 40);
-            }),
+            borderRadius: BorderRadius.circular(12.0),
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.6,
+                maxHeight: MediaQuery.of(context).size.width * 0.8,
+              ),
+              // ATUALIZAÇÃO: Usando CachedNetworkImage para a miniatura
+              child: CachedNetworkImage(
+                imageUrl: conteudo,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Container(
+                  color: Colors.grey[200],
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
+                errorWidget: (context, url, error) => Container(
+                  color: Colors.grey[200],
+                  child: const Icon(Icons.broken_image, size: 40),
+                ),
+              ),
+            ),
           ),
         );
         break;
