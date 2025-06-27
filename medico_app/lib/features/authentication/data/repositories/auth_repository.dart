@@ -66,12 +66,28 @@ class AuthRepository {
   Future<void> logout() async {
     await _firebaseAuth.signOut();
   }
-  
+
   Future<void> sendPasswordResetEmail(String email) async {
     try {
       await _firebaseAuth.sendPasswordResetEmail(email: email);
     } on FirebaseAuthException catch (e) {
       throw AuthException(e.message ?? 'Ocorreu um erro ao enviar o e-mail de redefinição.');
+    }
+  }
+
+  Future<void> sendSignInLinkToEmail(String email) async {
+    var acs = ActionCodeSettings(
+      url: 'https://projetomed.page.link/finishSignUp',
+      handleCodeInApp: true,
+      iOSBundleId: 'com.example.medicoApp',
+      androidPackageName: 'com.example.medico_app',
+      androidInstallApp: true,
+      androidMinimumVersion: '12',
+    );
+    try {
+      await _firebaseAuth.sendSignInLinkToEmail(email: email, actionCodeSettings: acs);
+    } on FirebaseAuthException catch (e) {
+      throw AuthException(e.message ?? 'Não foi possível enviar o link de login.');
     }
   }
 

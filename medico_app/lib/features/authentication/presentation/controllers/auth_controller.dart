@@ -106,6 +106,12 @@ class AuthController with ChangeNotifier {
       await _authRepository.sendPasswordResetEmail(email);
     });
   }
+  
+  Future<bool> handleEmailLinkSignIn(String email) async {
+    return _handleAuthOperation(() async {
+      await _authRepository.sendSignInLinkToEmail(email);
+    });
+  }
 
   Future<void> checkAuthStatus() async {
     _isLoading = true;
@@ -146,7 +152,6 @@ class AuthController with ChangeNotifier {
     );
   }
 
-  // MÉTODO QUE ESTAVA FALTANDO
   Future<bool> handleVerifySmsCode(String smsCode) async {
     if (_verificationId == null) {
       _errorMessage = "ID de verificação não encontrado. Por favor, tente enviar o código novamente.";

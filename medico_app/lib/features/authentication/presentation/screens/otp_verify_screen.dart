@@ -16,18 +16,6 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
   final _otpController = TextEditingController();
 
   @override
-  void initState() {
-    super.initState();
-    // Injeta o verificationId recebido no controller, caso ele tenha se perdido.
-    final authController = context.read<AuthController>();
-    if (authController.verificationId == null) {
-      // Esta é uma maneira de contornar casos onde o estado do controller é perdido.
-      // A melhor forma seria usar um gerenciador de estado que persista melhor.
-      // authController.setVerificationId(widget.verificationId);
-    }
-  }
-
-  @override
   void dispose() {
     _otpController.dispose();
     super.dispose();
@@ -39,7 +27,6 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
     }
     final authController = context.read<AuthController>();
     
-    // A chamada agora vai funcionar porque o método existe no controller.
     final success = await authController.handleVerifySmsCode(_otpController.text.trim());
 
     if (!success && mounted) {
@@ -50,7 +37,6 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
         ),
       );
     }
-    // O GoRouter cuidará do redirecionamento em caso de sucesso.
   }
 
   @override

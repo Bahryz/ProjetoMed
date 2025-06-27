@@ -27,7 +27,6 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
     final authController = context.read<AuthController>();
-    // O GoRouter cuidará do redirecionamento
     await authController.handleLogin(
       context,
       _emailController.text.trim(),
