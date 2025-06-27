@@ -11,7 +11,6 @@ class AuthRepository {
       : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
         _firestore = firestore ?? FirebaseFirestore.instance;
 
-  // Getter para acessar o usuário atual diretamente.
   User? get currentUser => _firebaseAuth.currentUser;
 
   Stream<User?> get authStateChanges => _firebaseAuth.authStateChanges();
@@ -67,6 +66,14 @@ class AuthRepository {
   Future<void> logout() async {
     await _firebaseAuth.signOut();
   }
+  
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await _firebaseAuth.sendPasswordResetEmail(email: email);
+    } on FirebaseAuthException catch (e) {
+      throw AuthException(e.message ?? 'Ocorreu um erro ao enviar o e-mail de redefinição.');
+    }
+  }
 
   Future<AppUser?> getUserData(String uid) async {
     try {
@@ -81,7 +88,6 @@ class AuthRepository {
     return null;
   }
 
-  /// Envia um e-mail de verificação para o usuário atual.
   Future<void> sendEmailVerification() async {
     try {
       if (currentUser != null && !currentUser!.emailVerified) {
@@ -92,18 +98,13 @@ class AuthRepository {
     }
   }
 
-  /// Recarrega o estado do usuário atual do Firebase para obter as informações mais recentes.
   Future<void> reloadUser() async {
     try {
       await currentUser?.reload();
     } catch (e) {
       print("Erro ao recarregar usuário: $e");
-      // Lidar com erros de rede ou outros problemas, se necessário.
     }
   }
-
-
-  // --- MÉTODOS DE AUTENTICAÇÃO POR TELEFONE ---
 
   Future<void> verifyPhoneNumber({
     required String phoneNumber,

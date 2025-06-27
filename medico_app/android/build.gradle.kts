@@ -1,9 +1,7 @@
-// android/app/build.gradle.kts
-
 plugins {
     id("com.android.application")
-    id("com.google.gms.google-services") // Firebase plugin
-    id("kotlin-android") // se usar Kotlin
+    id("com.google.gms.google-services")
+    id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -32,7 +30,6 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("debug")
-            // Para um build de produção, configure a minificação e o Proguard adequadamente:
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
@@ -40,14 +37,10 @@ android {
 }
 
 dependencies {
-    // Firebase BoM (Bill of Materials)
-     implementation(platform("com.google.firebase:firebase-bom:33.14.0"))
+    implementation(platform("com.google.firebase:firebase-bom:33.1.1"))
 
-    // Firebase SDKs
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-storage")
-
-     
 }

@@ -27,7 +27,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
     final authController = context.read<AuthController>();
-    // CORREÇÃO: A chamada de `handleLogin` agora passa o BuildContext
+    // O GoRouter cuidará do redirecionamento
     await authController.handleLogin(
       context,
       _emailController.text.trim(),
@@ -86,17 +86,29 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               onPressed: () async {
-                if (emailResetController.text.trim().isNotEmpty) {
-                  await authController.handlePasswordReset(emailResetController.text.trim());
-                  // CORREÇÃO: A verificação 'mounted' agora guarda o uso do context
-                  if (!mounted) return;
+                final email = emailResetController.text.trim();
+                if (email.isNotEmpty) {
+                  final success = await authController.handlePasswordReset(email);
+                  
+                  if (!dialogContext.mounted) return;
                   Navigator.of(dialogContext).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Link de redefinição enviado! Verifique seu email."),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
+                  if (!context.mounted) return;
+
+                  if (success) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Link de redefinição enviado! Verifique seu email."),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  } else {
+                     ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(authController.errorMessage ?? "Não foi possível enviar o email."),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 }
               },
               child: const Text("Enviar", style: TextStyle(color: Colors.white)),
@@ -189,34 +201,34 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        authController.isLoading
-                            ? const Center(child: CircularProgressIndicator())
-                            : ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: primaryColor,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                onPressed: _submit,
-                                child: const Text('Entrar', style: TextStyle(fontSize: 16, color: Colors.white)),
+                        if (authController.isLoading)
+                          const Center(child: CircularProgressIndicator())
+                        else
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
+                            ),
+                            onPressed: _submit,
+                            child: const Text('Entrar', style: TextStyle(fontSize: 16, color: Colors.white)),
+                          ),
+                        if (authController.errorMessage != null) ...[
+                          const SizedBox(height: 16),
+                          Text(
+                            authController.errorMessage!,
+                            style: const TextStyle(color: Colors.red, fontSize: 14),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
                       ],
                     ),
                   ),
                 ),
               ),
               const SizedBox(height: 30),
-               if (authController.errorMessage != null) ...[
-                const SizedBox(height: 16),
-                Text(
-                  authController.errorMessage!,
-                  style: const TextStyle(color: Colors.red, fontSize: 14),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-              const SizedBox(height: 16),
               const Text('Não tem uma conta? Cadastre-se como:'),
               const SizedBox(height: 16),
               Row(
@@ -228,7 +240,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: () => context.go('/register-paciente'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: primaryColor,
-                        // CORREÇÃO: Deprecated 'withOpacity' removido
                         side: BorderSide(color: primaryColor.withAlpha(128)),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -243,7 +254,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: () => context.go('/register-medico'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: primaryColor,
-                         // CORREÇÃO: Deprecated 'withOpacity' removido
                         side: BorderSide(color: primaryColor.withAlpha(128)),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

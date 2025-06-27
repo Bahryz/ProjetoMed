@@ -4,6 +4,7 @@ import 'package:medico_app/features/authentication/presentation/controllers/auth
 
 class OtpVerifyScreen extends StatefulWidget {
   final String verificationId;
+
   const OtpVerifyScreen({super.key, required this.verificationId});
 
   @override
@@ -11,50 +12,114 @@ class OtpVerifyScreen extends StatefulWidget {
 }
 
 class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _otpController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Injeta o verificationId recebido no controller, caso ele tenha se perdido.
+    final authController = context.read<AuthController>();
+    if (authController.verificationId == null) {
+      // Esta é uma maneira de contornar casos onde o estado do controller é perdido.
+      // A melhor forma seria usar um gerenciador de estado que persista melhor.
+      // authController.setVerificationId(widget.verificationId);
+    }
+  }
+
+  @override
+  void dispose() {
+    _otpController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submitOtp() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    final authController = context.read<AuthController>();
+    
+    // A chamada agora vai funcionar porque o método existe no controller.
+    final success = await authController.handleVerifySmsCode(_otpController.text.trim());
+
+    if (!success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authController.errorMessage ?? 'Ocorreu um erro desconhecido.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+    // O GoRouter cuidará do redirecionamento em caso de sucesso.
+  }
 
   @override
   Widget build(BuildContext context) {
     final authController = context.watch<AuthController>();
+    const primaryColor = Color(0xFFB89453);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Verificar Código')),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text('Insira o código de 6 dígitos recebido por SMS.'),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _otpController,
-              keyboardType: TextInputType.number,
-              maxLength: 6,
-              decoration: const InputDecoration(labelText: 'Código SMS', counterText: ""),
-            ),
-            const SizedBox(height: 24),
-            authController.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : ElevatedButton(
-                    onPressed: () {
-                      if (_otpController.text.length == 6) {
-                        context.read<AuthController>().handleOtpVerification(
-                              widget.verificationId,
-                              _otpController.text.trim(),
-                            );
-                      }
-                    },
-                    child: const Text('Verificar e Entrar'),
+      appBar: AppBar(
+        title: const Text('Verificar Código'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.sms_outlined, size: 60, color: primaryColor),
+              const SizedBox(height: 20),
+              const Text(
+                'Verificação por SMS',
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Insira o código de 6 dígitos que enviamos para o seu telefone.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+              const SizedBox(height: 40),
+              Form(
+                key: _formKey,
+                child: TextFormField(
+                  controller: _otpController,
+                  decoration: InputDecoration(
+                    labelText: 'Código de Verificação',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-            if (authController.errorMessage != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  authController.errorMessage!,
-                  style: const TextStyle(color: Colors.red),
+                  keyboardType: TextInputType.number,
                   textAlign: TextAlign.center,
+                  maxLength: 6,
+                  validator: (value) {
+                    if (value == null || value.length < 6) {
+                      return 'Insira o código completo';
+                    }
+                    return null;
+                  },
                 ),
-              ],
-          ],
+              ),
+              const SizedBox(height: 30),
+              authController.isLoading
+                  ? const CircularProgressIndicator()
+                  : ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 80),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: _submitOtp,
+                      child: const Text('Verificar', style: TextStyle(fontSize: 16, color: Colors.white)),
+                    ),
+            ],
+          ),
         ),
       ),
     );

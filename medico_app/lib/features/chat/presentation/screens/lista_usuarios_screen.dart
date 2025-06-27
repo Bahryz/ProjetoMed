@@ -9,7 +9,6 @@ import 'package:medico_app/features/authentication/presentation/controllers/auth
 class ListaUsuariosScreen extends StatelessWidget {
   const ListaUsuariosScreen({super.key});
 
-  // Paleta de cores profissional
   static const Color primaryColor = Color(0xFFB89453);
   static const Color accentColor = Color(0xFF4A4A4A);
   static const Color backgroundColor = Color(0xFFF7F7F7);
@@ -18,7 +17,6 @@ class ListaUsuariosScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final userService = UserService();
     final chatService = ChatService();
-    // Usar 'read' é mais apropriado aqui, pois não precisamos reconstruir o widget se o auth mudar.
     final authController = context.read<AuthController>();
     final currentUserId = authController.user?.uid;
 
@@ -40,7 +38,6 @@ class ListaUsuariosScreen extends StatelessWidget {
         iconTheme: const IconThemeData(color: accentColor),
       ),
       body: StreamBuilder<List<AppUser>>(
-        // Usando o stream para buscar apenas médicos, conforme sua lógica
         stream: userService.getMedicosStream(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
@@ -60,50 +57,36 @@ class ListaUsuariosScreen extends StatelessWidget {
             itemCount: medicos.length,
             itemBuilder: (context, index) {
               final medico = medicos[index];
-              // Não mostrar o próprio usuário na lista
-              // CORREÇÃO 1: 'id' foi trocado por 'uid'
               if (medico.uid == currentUserId) return const SizedBox.shrink();
               
-              final String inicial = medico.nome?.isNotEmpty == true ? medico.nome![0].toUpperCase() : 'M';
+              final String inicial = medico.nome.isNotEmpty == true ? medico.nome[0].toUpperCase() : 'M';
 
               return Column(
                 children: [
                   ListTile(
                     leading: CircleAvatar(
-                      // CORREÇÃO 2: 'withOpacity' foi trocado por 'withAlpha'
-                      backgroundColor: primaryColor.withAlpha(51), // 20% de opacidade
+                      backgroundColor: primaryColor.withAlpha(51),
                       child: Text(inicial, style: const TextStyle(color: primaryColor, fontWeight: FontWeight.bold)),
                     ),
-                    title: Text(medico.nome ?? 'Nome não disponível', style: const TextStyle(fontWeight: FontWeight.bold, color: accentColor)),
+                    title: Text(medico.nome, style: const TextStyle(fontWeight: FontWeight.bold, color: accentColor)),
                     subtitle: Text("Médico", style: TextStyle(color: Colors.grey[600])),
                     onTap: () async {
                       try {
-                        debugPrint("onTap iniciado para o médico: ${medico.nome}");
-                        
-                        debugPrint("Tentando criar ou obter a conversa...");
-                        // CORREÇÃO 3: 'getOrCreateConversa' foi corrigido para 'getOrCreateConversation' e 'medico.id' para 'medico.uid'
                         final conversaId = await chatService.getOrCreateConversation(currentUserId, medico.uid);
-                        debugPrint("Conversa ID obtida com sucesso: $conversaId");
-
-                        debugPrint("Navegando para a tela de detalhes do chat...");
                         
                         if (context.mounted) {
-                          // Usando Navigator.push para permitir voltar à lista
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => DetalhesChatScreen(
                                 conversaId: conversaId,
-                                destinatarioNome: medico.nome ?? 'Médico',
+                                destinatarioNome: medico.nome,
                                 remetenteId: currentUserId,
                               ),
                             ),
                           );
-                          debugPrint("Navegação concluída.");
                         }
                       } catch (e) {
-                        debugPrint("!!!!!!!!!! ERRO NO ONTAP !!!!!!!!!!");
-                        debugPrint(e.toString());
                         if (context.mounted) {
                            ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text("Erro ao iniciar conversa: $e"))

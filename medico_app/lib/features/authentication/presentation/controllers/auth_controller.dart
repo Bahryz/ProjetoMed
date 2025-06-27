@@ -1,25 +1,24 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:medico_app/core/utils/exceptions.dart';
 import 'package:medico_app/features/authentication/data/models/app_user.dart';
 import 'package:medico_app/features/authentication/data/repositories/auth_repository.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-/// Enum para representar os diferentes estados de autenticação do usuário.
 enum AuthStatus {
-  unauthenticated, // Usuário não está logado
-  authenticated, // Usuário logado e aprovado
-  pendingApproval, // Usuário logado mas aguardando aprovação
-  emailNotVerified, // Usuário logado mas com e-mail não verificado
+  unauthenticated,
+  authenticated,
+  pendingApproval,
+  emailNotVerified,
 }
 
-/// Gerencia o estado e a lógica de autenticação para a UI.
 class AuthController with ChangeNotifier {
   final AuthRepository _authRepository;
   late final StreamSubscription<User?> _authStateSubscription;
 
   AppUser? _appUser;
-  AppUser? get user => _appUser; // Renomeado de 'appUser' para 'user'
+  AppUser? get user => _appUser;
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
@@ -30,15 +29,12 @@ class AuthController with ChangeNotifier {
   String? _verificationId;
   String? get verificationId => _verificationId;
 
-  /// Retorna o status atual de autenticação, usado pelo roteador.
   AuthStatus get authStatus {
-    final firebaseUser = _authRepository.currentUser;
-    if (firebaseUser == null) {
+    if (_appUser == null) {
       return AuthStatus.unauthenticated;
     }
-    // Habilitando a verificação de e-mail
-    if (!firebaseUser.emailVerified) {
-       return AuthStatus.emailNotVerified;
+    if (!_appUser!.emailVerified) {
+      return AuthStatus.emailNotVerified;
     }
     if (_appUser?.status == 'pendente') {
       return AuthStatus.pendingApproval;
@@ -46,12 +42,10 @@ class AuthController with ChangeNotifier {
     if (_appUser?.status == 'aprovado') {
       return AuthStatus.authenticated;
     }
-    // Caso padrão, se o usuário estiver logado no Firebase mas sem dados no Firestore
     return AuthStatus.unauthenticated;
   }
 
   AuthController(this._authRepository) {
-    // Ouve as mudanças no estado de autenticação do Firebase
     _authStateSubscription =
         _authRepository.authStateChanges.listen(_onAuthStateChanged);
   }
@@ -62,57 +56,66 @@ class AuthController with ChangeNotifier {
     super.dispose();
   }
 
-  /// Callback que é acionado sempre que o usuário faz login ou logout.
   Future<void> _onAuthStateChanged(User? firebaseUser) async {
     if (firebaseUser == null) {
       _appUser = null;
     } else {
-      // Se o usuário estiver logado, busca os dados dele no Firestore.
-      _appUser = await _authRepository.getUserData(firebaseUser.uid);
+      await firebaseUser.reload();
+      final refreshedUser = _authRepository.currentUser;
+
+      if (refreshedUser != null) {
+        final firestoreUser = await _authRepository.getUserData(refreshedUser.uid);
+        if (firestoreUser != null) {
+          _appUser = firestoreUser.copyWith(
+            emailVerified: refreshedUser.emailVerified,
+          );
+        } else {
+          _appUser = null;
+        }
+      } else {
+        _appUser = null;
+      }
     }
     notifyListeners();
   }
 
-  /// Lida com o processo de registro de um novo usuário.
   Future<bool> handleRegister(AppUser user, String password) async {
     return _handleAuthOperation(() async {
       await _authRepository.registerUser(user, password);
     });
   }
 
-  /// Lida com o processo de login.
-  Future<bool> handleLogin(String email, String password) async {
+  Future<bool> handleLogin(BuildContext context, String email, String password) async {
     return _handleAuthOperation(() async {
       await _authRepository.loginWithEmailAndPassword(email, password);
     });
   }
 
-  /// Lida com o processo de logout.
   Future<void> handleLogout() async {
     await _authRepository.logout();
-    _appUser = null;
-    notifyListeners();
   }
 
-  /// Envia o e-mail de verificação para o usuário logado.
-  Future<void> sendEmailVerification() async {
+  Future<bool> sendEmailVerification() async {
     return _handleAuthOperation(() async {
       await _authRepository.sendEmailVerification();
     });
   }
 
-  /// Verifica o status de autenticação, recarregando o usuário.
-  /// Usado na tela de verificação de e-mail para checar se o usuário já confirmou.
+  Future<bool> handlePasswordReset(String email) async {
+    return _handleAuthOperation(() async {
+      await _authRepository.sendPasswordResetEmail(email);
+    });
+  }
+
   Future<void> checkAuthStatus() async {
+    _isLoading = true;
+    notifyListeners();
     await _authRepository.reloadUser();
-    // Força a notificação dos listeners para que a UI (especialmente o GoRouter)
-    // reavalie o 'authStatus' com a informação atualizada do usuário.
+    _isLoading = false;
     notifyListeners();
   }
 
-
-  /// Lida com o processo de login com telefone (envio de SMS).
-  Future<void> handlePhoneSignIn(String phoneNumber) async {
+  Future<void> handlePhoneSignIn(BuildContext context, String phoneNumber) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -134,6 +137,7 @@ class AuthController with ChangeNotifier {
       codeSent: (String verificationId, int? resendToken) {
         _verificationId = verificationId;
         _isLoading = false;
+        context.go('/verify-otp', extra: verificationId);
         notifyListeners();
       },
       codeAutoRetrievalTimeout: (String verificationId) {
@@ -142,24 +146,24 @@ class AuthController with ChangeNotifier {
     );
   }
 
-  /// Lida com a verificação do código SMS.
+  // MÉTODO QUE ESTAVA FALTANDO
   Future<bool> handleVerifySmsCode(String smsCode) async {
     if (_verificationId == null) {
       _errorMessage = "ID de verificação não encontrado. Por favor, tente enviar o código novamente.";
       notifyListeners();
       return false;
     }
+    
     final credential = PhoneAuthProvider.credential(
       verificationId: _verificationId!,
       smsCode: smsCode,
     );
+    
     return _handleAuthOperation(() async {
       await _authRepository.signInWithPhoneCredential(credential);
     });
   }
 
-  /// Função auxiliar para executar operações de autenticação,
-  /// gerenciando os estados de 'loading' e 'error' de forma padronizada.
   Future<bool> _handleAuthOperation(Future<void> Function() operation) async {
     _isLoading = true;
     _errorMessage = null;
@@ -169,12 +173,12 @@ class AuthController with ChangeNotifier {
       await operation();
       _isLoading = false;
       notifyListeners();
-      return true; // Sucesso
+      return true;
     } on AuthException catch (e) {
       _errorMessage = e.message;
       _isLoading = false;
       notifyListeners();
-      return false; // Falha
+      return false;
     }
   }
 }

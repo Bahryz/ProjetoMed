@@ -4,6 +4,7 @@ class AppUser {
   final String uid;
   final String nome;
   final String? email;
+  final bool emailVerified; // Campo adicionado
   final String? crm;
   final String? telefone;
   final String userType;
@@ -14,6 +15,7 @@ class AppUser {
     required this.uid,
     required this.nome,
     this.email,
+    this.emailVerified = false, // Valor padrão adicionado
     this.crm,
     this.telefone,
     required this.userType,
@@ -25,6 +27,7 @@ class AppUser {
     String? uid,
     String? nome,
     String? email,
+    bool? emailVerified, // Adicionado ao copyWith
     String? crm,
     String? telefone,
     String? userType,
@@ -35,6 +38,7 @@ class AppUser {
       uid: uid ?? this.uid,
       nome: nome ?? this.nome,
       email: email ?? this.email,
+      emailVerified: emailVerified ?? this.emailVerified, // Adicionado
       crm: crm ?? this.crm,
       telefone: telefone ?? this.telefone,
       userType: userType ?? this.userType,
@@ -43,6 +47,7 @@ class AppUser {
     );
   }
 
+  // O campo 'emailVerified' não é salvo no Firestore, pois é gerenciado pelo Firebase Auth.
   Map<String, dynamic> toJson() {
     return {
       'uid': uid,
@@ -67,6 +72,7 @@ class AppUser {
       userType: data['userType'] ?? 'paciente',
       cpf: data['cpf'],
       status: data['status'],
+      // 'emailVerified' é preenchido pelo AuthController
     );
   }
 }
