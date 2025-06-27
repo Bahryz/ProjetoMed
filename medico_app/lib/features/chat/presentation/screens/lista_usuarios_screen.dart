@@ -38,17 +38,18 @@ class ListaUsuariosScreen extends StatelessWidget {
         iconTheme: const IconThemeData(color: accentColor),
       ),
       body: StreamBuilder<List<AppUser>>(
+        // A chamada agora funcionará porque o método existe em UserService
         stream: userService.getMedicosStream(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             debugPrint("Erro no StreamBuilder: ${snapshot.error}");
-            return const Center(child: Text('Erro ao carregar usuários.'));
+            return const Center(child: Text('Erro ao carregar os médicos.'));
           }
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator(color: primaryColor));
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('Nenhum médico encontrado.'));
+            return const Center(child: Text('Nenhum médico disponível no momento.'));
           }
 
           final medicos = snapshot.data!;
@@ -57,9 +58,10 @@ class ListaUsuariosScreen extends StatelessWidget {
             itemCount: medicos.length,
             itemBuilder: (context, index) {
               final medico = medicos[index];
-              if (medico.uid == currentUserId) return const SizedBox.shrink();
+              // Não exibe o próprio usuário na lista (caso um médico esteja vendo a lista)
+              if (medico.uid == currentUserId) return const SizedBox.shrink(); 
               
-              final String inicial = medico.nome.isNotEmpty == true ? medico.nome[0].toUpperCase() : 'M';
+              final String inicial = medico.nome.isNotEmpty ? medico.nome[0].toUpperCase() : 'M';
 
               return Column(
                 children: [
@@ -68,10 +70,11 @@ class ListaUsuariosScreen extends StatelessWidget {
                       backgroundColor: primaryColor.withAlpha(51),
                       child: Text(inicial, style: const TextStyle(color: primaryColor, fontWeight: FontWeight.bold)),
                     ),
-                    title: Text(medico.nome, style: const TextStyle(fontWeight: FontWeight.bold, color: accentColor)),
-                    subtitle: Text("Médico", style: TextStyle(color: Colors.grey[600])),
+                    title: Text("Dr(a). ${medico.nome}", style: const TextStyle(fontWeight: FontWeight.bold, color: accentColor)),
+                    subtitle: Text(medico.crm ?? "Médico", style: TextStyle(color: Colors.grey[600])),
                     onTap: () async {
                       try {
+                        // O nome do método no ChatService também foi padronizado
                         final conversaId = await chatService.getOrCreateConversation(currentUserId, medico.uid);
                         
                         if (context.mounted) {
@@ -80,7 +83,7 @@ class ListaUsuariosScreen extends StatelessWidget {
                             MaterialPageRoute(
                               builder: (context) => DetalhesChatScreen(
                                 conversaId: conversaId,
-                                destinatarioNome: medico.nome,
+                                destinatarioNome: "Dr(a). ${medico.nome}",
                                 remetenteId: currentUserId,
                               ),
                             ),

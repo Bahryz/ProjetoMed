@@ -60,7 +60,7 @@ class _AdminApprovalScreenState extends State<AdminApprovalScreen> {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () {
-              context.read<AuthController>().handleSignOut();
+              context.read<AuthController>().handleLogout();
             },
           ),
         ],
