@@ -1,16 +1,20 @@
+// HomeScreen.dart
+
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart'; // Mude o import
 import 'package:go_router/go_router.dart';
 import 'package:medico_app/features/authentication/data/models/app_user.dart';
 import 'package:medico_app/features/authentication/presentation/controllers/auth_controller.dart';
-import 'package:medico_app/features/chat/services/user_service.dart';
+// Remova o import do user_service, não é mais necessário aqui
 
-class HomeScreen extends ConsumerWidget {
+// Muda de ConsumerWidget para StatelessWidget
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final userType = ref.watch(authControllerProvider).user?.userType;
+  Widget build(BuildContext context) {
+    // Acessa o AuthController via context.watch
+    final userType = context.watch<AuthController>().user?.userType;
 
     if (userType == 'paciente') {
       return const _PatientHomeScreen();
@@ -20,12 +24,14 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-class _DoctorDashboard extends ConsumerWidget {
+// Muda de ConsumerWidget para StatelessWidget
+class _DoctorDashboard extends StatelessWidget {
   const _DoctorDashboard();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final authController = ref.watch(authControllerProvider);
+  Widget build(BuildContext context) {
+    // Acessa o AuthController via context.watch
+    final authController = context.watch<AuthController>();
     final user = authController.user;
     final theme = Theme.of(context);
 
@@ -40,13 +46,16 @@ class _DoctorDashboard extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
+            // Usa context.read para chamar uma função
             onPressed: () async {
-              await ref.read(authControllerProvider).handleLogout();
+              await context.read<AuthController>().handleLogout();
             },
             tooltip: 'Sair',
           ),
         ],
       ),
+      // ... O resto do seu widget _DoctorDashboard não precisa mudar
+      // (SingleChildScrollView, Card, GridView, etc.)
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -124,6 +133,7 @@ class _DoctorDashboard extends ConsumerWidget {
     );
   }
 
+  // O método _buildActionCard não precisa de alterações
   Widget _buildActionCard(
     BuildContext context, {
     required IconData icon,
@@ -155,12 +165,15 @@ class _DoctorDashboard extends ConsumerWidget {
   }
 }
 
-class _PatientHomeScreen extends ConsumerWidget {
+// Muda de ConsumerWidget para StatelessWidget
+class _PatientHomeScreen extends StatelessWidget {
   const _PatientHomeScreen();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final doctorAsyncValue = ref.watch(doctorStreamProvider);
+  Widget build(BuildContext context) {
+    // Acessa a stream do médico via context.watch
+    // A stream agora nos dá um AppUser? diretamente.
+    final AppUser? doctor = context.watch<AppUser?>();
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -170,8 +183,9 @@ class _PatientHomeScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
+            // Usa context.read para chamar a função
             onPressed: () async {
-              await ref.read(authControllerProvider).handleLogout();
+              await context.read<AuthController>().handleLogout();
             },
             tooltip: 'Sair',
           ),
@@ -180,45 +194,40 @@ class _PatientHomeScreen extends ConsumerWidget {
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
-          child: doctorAsyncValue.when(
-            data: (AppUser? doctor) {
-              if (doctor == null) {
-                return const Text('Nenhum médico disponível no momento.');
-              }
-              return Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.chat_bubble_outline_rounded, size: 80, color: Colors.blue),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Pronto para começar?',
-                    style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Clique no botão abaixo para iniciar uma conversa segura com o seu médico.',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.titleMedium?.copyWith(color: Colors.grey.shade600),
-                  ),
-                  const SizedBox(height: 32),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.send_rounded),
-                    label: const Text('Iniciar Conversa com Médico'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                      textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+          // Como o StreamProvider já lida com os estados,
+          // podemos checar diretamente o dado.
+          child: doctor == null
+              ? const Text('Nenhum médico disponível no momento.')
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.chat_bubble_outline_rounded, size: 80, color: Colors.blue),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Pronto para começar?',
+                      style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
                     ),
-                    onPressed: () {
-                      context.go('/chat', extra: doctor);
-                    },
-                  ),
-                ],
-              );
-            },
-            loading: () => const CircularProgressIndicator(),
-            error: (err, stack) => Text('Ocorreu um erro: $err'),
-          ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Clique no botão abaixo para iniciar uma conversa segura com o seu médico.',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.titleMedium?.copyWith(color: Colors.grey.shade600),
+                    ),
+                    const SizedBox(height: 32),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.send_rounded),
+                      label: const Text('Iniciar Conversa com Médico'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      ),
+                      onPressed: () {
+                        context.go('/chat', extra: doctor);
+                      },
+                    ),
+                  ],
+                ),
         ),
       ),
     );

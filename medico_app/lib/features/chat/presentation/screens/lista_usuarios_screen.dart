@@ -1,17 +1,22 @@
+// ListaUsuariosScreen.dart
+
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart'; // Mude o import
 import 'package:go_router/go_router.dart';
 import 'package:medico_app/features/authentication/data/models/app_user.dart';
-import 'package:medico_app/features/chat/services/user_service.dart';
+// Remova o import do user_service
 
-class ListaUsuariosScreen extends ConsumerStatefulWidget {
+// Muda de ConsumerStatefulWidget para StatefulWidget
+class ListaUsuariosScreen extends StatefulWidget {
   const ListaUsuariosScreen({super.key});
 
   @override
-  ConsumerState<ListaUsuariosScreen> createState() => _ListaUsuariosScreenState();
+  // Muda o tipo de State
+  State<ListaUsuariosScreen> createState() => _ListaUsuariosScreenState();
 }
 
-class _ListaUsuariosScreenState extends ConsumerState<ListaUsuariosScreen> {
+// Muda de ConsumerState para State
+class _ListaUsuariosScreenState extends State<ListaUsuariosScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -33,7 +38,12 @@ class _ListaUsuariosScreenState extends ConsumerState<ListaUsuariosScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final patientsStream = ref.watch(patientsStreamProvider);
+    // Acessa a lista de pacientes diretamente do StreamProvider
+    final List<AppUser> users = context.watch<List<AppUser>>();
+
+    final filteredUsers = users.where((user) {
+      return user.nome.toLowerCase().contains(_searchQuery);
+    }).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -59,38 +69,26 @@ class _ListaUsuariosScreenState extends ConsumerState<ListaUsuariosScreen> {
             ),
           ),
           Expanded(
-            child: patientsStream.when(
-              data: (users) {
-                final filteredUsers = users.where((user) {
-                  return user.nome.toLowerCase().contains(_searchQuery);
-                }).toList();
-
-                if (filteredUsers.isEmpty) {
-                  return const Center(
+            // Não precisamos mais do `.when()` porque o StreamProvider já
+            // lidou com os estados de loading/error
+            child: filteredUsers.isEmpty
+                ? const Center(
                     child: Text('Nenhum paciente encontrado.'),
-                  );
-                }
-                
-                return ListView.builder(
-                  itemCount: filteredUsers.length,
-                  itemBuilder: (context, index) {
-                    final user = filteredUsers[index];
-                    return _buildUserTile(user);
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(
-                child: Text('Erro ao carregar pacientes: $error'),
-              ),
-            ),
+                  )
+                : ListView.builder(
+                    itemCount: filteredUsers.length,
+                    itemBuilder: (context, index) {
+                      final user = filteredUsers[index];
+                      return _buildUserTile(user);
+                    },
+                  ),
           ),
         ],
       ),
     );
   }
 
-
+  // O método _buildUserTile não precisa de alterações
   Widget _buildUserTile(AppUser user) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
@@ -106,7 +104,7 @@ class _ListaUsuariosScreenState extends ConsumerState<ListaUsuariosScreen> {
             ),
           ),
           title: Text(user.nome, style: const TextStyle(fontWeight: FontWeight.w600)),
-          subtitle: Text('Paciente - Toque para conversar'),
+          subtitle: const Text('Paciente - Toque para conversar'),
           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
           onTap: () {
              context.go('/chat', extra: user);

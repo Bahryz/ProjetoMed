@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:medico_app/core/utils/exceptions.dart';
 import 'package:medico_app/features/authentication/data/models/app_user.dart';
@@ -188,12 +187,3 @@ class AuthController with ChangeNotifier {
     }
   }
 }
-
-final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return AuthRepository();
-});
-
-final authControllerProvider = ChangeNotifierProvider<AuthController>((ref) {
-  final authRepository = ref.watch(authRepositoryProvider);
-  return AuthController(authRepository);
-});

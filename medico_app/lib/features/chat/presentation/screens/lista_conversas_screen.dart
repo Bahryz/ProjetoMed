@@ -1,17 +1,21 @@
+// ListaConversasScreen.dart
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart'; // Mude o import
 
 import '../../../authentication/presentation/controllers/auth_controller.dart'; 
 import '../../../authentication/data/models/app_user.dart';
 
-class ListaConversasScreen extends ConsumerWidget {
+// Muda de ConsumerWidget para StatelessWidget
+class ListaConversasScreen extends StatelessWidget {
   const ListaConversasScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final authController = ref.watch(authControllerProvider);
+  Widget build(BuildContext context) {
+    // Acessa o controller via context.watch
+    final authController = context.watch<AuthController>();
     final currentUser = authController.user;
 
     if (currentUser == null) {
@@ -20,6 +24,7 @@ class ListaConversasScreen extends ConsumerWidget {
       );
     }
 
+    // O resto do código permanece o mesmo, pois ele já usa StreamBuilder.
     final String roleToFetch =
         currentUser.userType == 'medico' ? 'paciente' : 'medico';
 
@@ -29,8 +34,7 @@ class ListaConversasScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
-            onPressed: () {
-            },
+            onPressed: () {},
             tooltip: 'Configurações',
           ),
         ],

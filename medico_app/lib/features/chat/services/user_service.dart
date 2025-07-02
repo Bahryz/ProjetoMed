@@ -1,21 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:medico_app/features/authentication/data/models/app_user.dart';
 
-final userServiceProvider = Provider((ref) => UserService());
-
-final usersStreamProvider = StreamProvider<List<AppUser>>((ref) {
-  return ref.watch(userServiceProvider).getUsersStream();
-});
-
-final patientsStreamProvider = StreamProvider<List<AppUser>>((ref) {
-  return ref.watch(userServiceProvider).getPatientsStream();
-});
-
-final doctorStreamProvider = StreamProvider<AppUser?>((ref) {
-  return ref.watch(userServiceProvider).getDoctorStream();
-});
 
 class UserService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
