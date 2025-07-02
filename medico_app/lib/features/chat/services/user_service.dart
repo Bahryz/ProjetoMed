@@ -1,39 +1,58 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:medico_app/features/authentication/data/models/app_user.dart';
+
+final userServiceProvider = Provider((ref) => UserService());
+
+final usersStreamProvider = StreamProvider<List<AppUser>>((ref) {
+  return ref.watch(userServiceProvider).getUsersStream();
+});
+
+final patientsStreamProvider = StreamProvider<List<AppUser>>((ref) {
+  return ref.watch(userServiceProvider).getPatientsStream();
+});
+
+final doctorStreamProvider = StreamProvider<AppUser?>((ref) {
+  return ref.watch(userServiceProvider).getDoctorStream();
+});
 
 class UserService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Método adicionado para buscar um stream de médicos aprovados
-  Stream<List<AppUser>> getMedicosStream() {
-    return _firestore
-        .collection('users')
-        .where('userType', isEqualTo: 'medico') // Filtra para pegar apenas médicos
-        .where('status', isEqualTo: 'aprovado') // Filtra para pegar apenas os aprovados
-        .snapshots() // Retorna um Stream que atualiza em tempo real
-        .map((snapshot) {
-      try {
-        // Mapeia cada documento do Firestore para um objeto AppUser
-        return snapshot.docs
-            .map((doc) => AppUser.fromDocumentSnapshot(doc))
-            .toList();
-      } catch (e) {
-        print('Erro ao converter médicos: $e');
-        return [];
-      }
+  Stream<List<AppUser>> getUsersStream() {
+    return _firestore.collection('users').snapshots().map((snapshot) {
+      return snapshot.docs
+          .map((doc) => AppUser.fromDocumentSnapshot(doc))
+          .where((user) => user.uid != _auth.currentUser?.uid)
+          .toList();
     });
   }
-  
-  // O método getUser continua aqui caso você precise dele em outro lugar.
-  Future<AppUser?> getUser(String uid) async {
-    try {
-      DocumentSnapshot doc = await _firestore.collection('users').doc(uid).get();
-      if (doc.exists) {
-        return AppUser.fromDocumentSnapshot(doc);
+
+  Stream<List<AppUser>> getPatientsStream() {
+    return _firestore
+        .collection('users')
+        .where('userType', isEqualTo: 'paciente')
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => AppUser.fromDocumentSnapshot(doc))
+          .toList();
+    });
+  }
+
+  Stream<AppUser?> getDoctorStream() {
+    return _firestore
+        .collection('users')
+        .where('userType', isEqualTo: 'medico')
+        .limit(1)
+        .snapshots()
+        .map((snapshot) {
+      if (snapshot.docs.isNotEmpty) {
+        return AppUser.fromDocumentSnapshot(snapshot.docs.first);
       }
-    } catch (e) {
-      print(e);
-    }
-    return null;
+      return null;
+    });
   }
 }

@@ -11,7 +11,8 @@ import 'package:medico_app/features/authentication/presentation/screens/verify_e
 import 'package:medico_app/features/authentication/presentation/screens/pending_approval_screen.dart';
 import 'package:medico_app/features/chat/presentation/screens/lista_usuarios_screen.dart';
 import 'package:medico_app/features/chat/presentation/screens/detalhes_chat_screen.dart';
-
+import 'package:medico_app/features/chat/presentation/screens/lista_conversas_screen.dart';
+import 'package:medico_app/features/settings/presentation/screens/settings_screen.dart';
 
 class AppRouter {
   final AuthController authController;
@@ -50,31 +51,54 @@ class AppRouter {
         path: '/lista-usuarios',
         builder: (context, state) => const ListaUsuariosScreen(),
       ),
-       GoRoute(
+      GoRoute(
         path: '/conversas',
         builder: (context, state) => const ListaUsuariosScreen(),  
       ),
+      GoRoute(
+        path: '/conversas',
+        name: 'conversas',
+        builder: (context, state) => const ListaConversasScreen(),
+      ),
+      GoRoute(
+        path: '/configuracoes',
+        name: 'configuracoes',
+        builder: (context, state) => const SettingsScreen(),
+      ),
     ],
     redirect: (BuildContext context, GoRouterState state) {
-      final status = authController.authStatus;
-      
+      // A linha abaixo pode variar dependendo de como você expõe seu controller.
+      // Se estiver usando Riverpod, pode ser: final authController = ref.read(authControllerProvider.notifier);
+      final status = authController.authStatus; 
+
       final unauthenticatedRoutes = ['/login', '/register-paciente', '/register-medico'];
       final isGoingToUnauthenticatedRoute = unauthenticatedRoutes.contains(state.matchedLocation);
 
+      // Pega a rota atual do usuário
+      final currentLocation = state.matchedLocation;
+
       switch (status) {
         case AuthStatus.unauthenticated:
-   
+          // Se não está logado, só pode acessar rotas de não-autenticado.
+          // Caso contrário, vai para o login.
           return isGoingToUnauthenticatedRoute ? null : '/login';
 
         case AuthStatus.emailNotVerified:
-           return state.matchedLocation == '/verify-email' ? null : '/verify-email';
+          // Se o e-mail não foi verificado, força o usuário a ir para a tela de verificação.
+          return currentLocation == '/verify-email' ? null : '/verify-email';
 
         case AuthStatus.pendingApproval:
-           return state.matchedLocation == '/pending-approval' ? null : '/pending-approval';
+          // Se o cadastro do médico está pendente, força a ida para a tela de aviso.
+          return currentLocation == '/pending-approval' ? null : '/pending-approval';
 
         case AuthStatus.authenticated:
-           
-          return isGoingToUnauthenticatedRoute ? '/' : null;
+          // Se o usuário está autenticado e tenta acessar o login/registro,
+          // ou a rota raiz, redireciona para a tela principal de conversas.
+          if (isGoingToUnauthenticatedRoute || currentLocation == '/') {
+            return '/conversas';
+          }
+          // Caso contrário, permite a navegação.
+          return null;
       }
     },
   );

@@ -1,109 +1,117 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:medico_app/features/authentication/data/models/app_user.dart';
-import 'package:medico_app/features/chat/services/chat_service.dart';
 import 'package:medico_app/features/chat/services/user_service.dart';
-import 'package:medico_app/features/chat/presentation/screens/detalhes_chat_screen.dart';
-import 'package:provider/provider.dart';
-import 'package:medico_app/features/authentication/presentation/controllers/auth_controller.dart';
 
-class ListaUsuariosScreen extends StatelessWidget {
+class ListaUsuariosScreen extends ConsumerStatefulWidget {
   const ListaUsuariosScreen({super.key});
 
-  static const Color primaryColor = Color(0xFFB89453);
-  static const Color accentColor = Color(0xFF4A4A4A);
-  static const Color backgroundColor = Color(0xFFF7F7F7);
+  @override
+  ConsumerState<ListaUsuariosScreen> createState() => _ListaUsuariosScreenState();
+}
+
+class _ListaUsuariosScreenState extends ConsumerState<ListaUsuariosScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text.toLowerCase();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final userService = UserService();
-    final chatService = ChatService();
-    final authController = context.read<AuthController>();
-    final currentUserId = authController.user?.uid;
-
-    if (currentUserId == null) {
-      return const Scaffold(
-        body: Center(child: Text("Erro: Usuário não autenticado.")),
-      );
-    }
+    final patientsStream = ref.watch(patientsStreamProvider);
 
     return Scaffold(
-      backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: const Text(
-          'Iniciar Nova Conversa',
-          style: TextStyle(color: accentColor, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 1.0,
-        iconTheme: const IconThemeData(color: accentColor),
+        title: const Text('Pacientes'),
+        centerTitle: true,
       ),
-      body: StreamBuilder<List<AppUser>>(
-        // A chamada agora funcionará porque o método existe em UserService
-        stream: userService.getMedicosStream(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            debugPrint("Erro no StreamBuilder: ${snapshot.error}");
-            return const Center(child: Text('Erro ao carregar os médicos.'));
-          }
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: primaryColor));
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('Nenhum médico disponível no momento.'));
-          }
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Pesquisar paciente...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: Colors.grey.shade200,
+              ),
+            ),
+          ),
+          Expanded(
+            child: patientsStream.when(
+              data: (users) {
+                final filteredUsers = users.where((user) {
+                  return user.nome.toLowerCase().contains(_searchQuery);
+                }).toList();
 
-          final medicos = snapshot.data!;
+                if (filteredUsers.isEmpty) {
+                  return const Center(
+                    child: Text('Nenhum paciente encontrado.'),
+                  );
+                }
+                
+                return ListView.builder(
+                  itemCount: filteredUsers.length,
+                  itemBuilder: (context, index) {
+                    final user = filteredUsers[index];
+                    return _buildUserTile(user);
+                  },
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Center(
+                child: Text('Erro ao carregar pacientes: $error'),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-          return ListView.builder(
-            itemCount: medicos.length,
-            itemBuilder: (context, index) {
-              final medico = medicos[index];
-              // Não exibe o próprio usuário na lista (caso um médico esteja vendo a lista)
-              if (medico.uid == currentUserId) return const SizedBox.shrink(); 
-              
-              final String inicial = medico.nome.isNotEmpty ? medico.nome[0].toUpperCase() : 'M';
 
-              return Column(
-                children: [
-                  ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: primaryColor.withAlpha(51),
-                      child: Text(inicial, style: const TextStyle(color: primaryColor, fontWeight: FontWeight.bold)),
-                    ),
-                    title: Text("Dr(a). ${medico.nome}", style: const TextStyle(fontWeight: FontWeight.bold, color: accentColor)),
-                    subtitle: Text(medico.crm ?? "Médico", style: TextStyle(color: Colors.grey[600])),
-                    onTap: () async {
-                      try {
-                        // O nome do método no ChatService também foi padronizado
-                        final conversaId = await chatService.getOrCreateConversation(currentUserId, medico.uid);
-                        
-                        if (context.mounted) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => DetalhesChatScreen(
-                                conversaId: conversaId,
-                                destinatarioNome: "Dr(a). ${medico.nome}",
-                                remetenteId: currentUserId,
-                              ),
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text("Erro ao iniciar conversa: $e"))
-                          );
-                        }
-                      }
-                    },
-                  ),
-                  const Divider(height: 1, indent: 72, endIndent: 16),
-                ],
-              );
-            },
-          );
-        },
+  Widget _buildUserTile(AppUser user) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+      child: Card(
+        elevation: 1,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        child: ListTile(
+          leading: CircleAvatar(
+            backgroundColor: Colors.blue.shade100,
+            child: Text(
+              user.nome.isNotEmpty ? user.nome[0].toUpperCase() : 'P',
+              style: TextStyle(color: Colors.blue.shade800, fontWeight: FontWeight.bold),
+            ),
+          ),
+          title: Text(user.nome, style: const TextStyle(fontWeight: FontWeight.w600)),
+          subtitle: Text('Paciente - Toque para conversar'),
+          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+          onTap: () {
+             context.go('/chat', extra: user);
+          },
+        ),
       ),
     );
   }
