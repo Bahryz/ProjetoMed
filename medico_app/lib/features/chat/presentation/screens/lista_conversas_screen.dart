@@ -1,46 +1,47 @@
-// ListaConversasScreen.dart
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart'; // Mude o import
+import 'package:medico_app/features/authentication/data/models/app_user.dart';
+import 'package:medico_app/features/authentication/presentation/controllers/auth_controller.dart';
+import 'package:provider/provider.dart';
 
-import '../../../authentication/presentation/controllers/auth_controller.dart'; 
-import '../../../authentication/data/models/app_user.dart';
-
-// Muda de ConsumerWidget para StatelessWidget
 class ListaConversasScreen extends StatelessWidget {
   const ListaConversasScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Acessa o controller via context.watch
+    // Acessa o AuthController usando Provider para obter o usuário atual.
     final authController = context.watch<AuthController>();
     final currentUser = authController.user;
 
+    // Mostra um indicador de carregamento se o usuário ainda não foi carregado.
     if (currentUser == null) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
-    // O resto do código permanece o mesmo, pois ele já usa StreamBuilder.
+    // Determina qual tipo de usuário deve ser buscado (médicos ou pacientes).
     final String roleToFetch =
         currentUser.userType == 'medico' ? 'paciente' : 'medico';
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Conversas'),
+        title: Text(roleToFetch == 'paciente' ? 'Pacientes' : 'Médicos'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {},
-            tooltip: 'Configurações',
+            icon: const Icon(Icons.logout),
+            onPressed: () {
+              // CORREÇÃO: Chamada padronizada para o método 'handleLogout'.
+              context.read<AuthController>().handleLogout();
+            },
+            tooltip: 'Sair',
           ),
         ],
         automaticallyImplyLeading: false,
       ),
       body: StreamBuilder<QuerySnapshot>(
+        // Cria um stream que busca os usuários do tipo desejado no Firestore.
         stream: FirebaseFirestore.instance
             .collection('users')
             .where('userType', isEqualTo: roleToFetch)
@@ -51,18 +52,19 @@ class ListaConversasScreen extends StatelessWidget {
           }
 
           if (snapshot.hasError) {
-            return Center(child: Text('Erro ao carregar contatos: ${snapshot.error}'));
+            return Center(child: Text('Erro: ${snapshot.error}'));
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             final String message = roleToFetch == 'paciente'
                 ? 'Nenhum paciente encontrado.'
-                : 'Nenhum médico disponível no momento.';
+                : 'Nenhum médico disponível.';
             return Center(child: Text(message));
           }
 
           final usersDocs = snapshot.data!.docs;
 
+          // Constrói a lista de usuários.
           return ListView.builder(
             itemCount: usersDocs.length,
             itemBuilder: (context, index) {
@@ -79,6 +81,8 @@ class ListaConversasScreen extends StatelessWidget {
                       otherUser.userType.substring(1),
                 ),
                 onTap: () {
+                  // NAVEGAÇÃO: Ao tocar, vai para a rota '/chat'
+                  // e passa o objeto 'otherUser' como argumento.
                   context.go('/chat', extra: otherUser);
                 },
               );

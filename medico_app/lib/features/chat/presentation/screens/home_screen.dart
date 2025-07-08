@@ -1,20 +1,26 @@
-// HomeScreen.dart
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // Mude o import
+import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:medico_app/features/authentication/data/models/app_user.dart';
 import 'package:medico_app/features/authentication/presentation/controllers/auth_controller.dart';
-// Remova o import do user_service, não é mais necessário aqui
 
-// Muda de ConsumerWidget para StatelessWidget
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Acessa o AuthController via context.watch
+    // Acessa o tipo de usuário para decidir qual tela mostrar.
     final userType = context.watch<AuthController>().user?.userType;
+
+    // Se o tipo de usuário ainda não foi carregado, mostra um indicador.
+    if (userType == null) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
 
     if (userType == 'paciente') {
       return const _PatientHomeScreen();
@@ -24,13 +30,11 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-// Muda de ConsumerWidget para StatelessWidget
 class _DoctorDashboard extends StatelessWidget {
   const _DoctorDashboard();
 
   @override
   Widget build(BuildContext context) {
-    // Acessa o AuthController via context.watch
     final authController = context.watch<AuthController>();
     final user = authController.user;
     final theme = Theme.of(context);
@@ -46,16 +50,14 @@ class _DoctorDashboard extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            // Usa context.read para chamar uma função
             onPressed: () async {
+              // Chama o método handleLogout que está no AuthController.
               await context.read<AuthController>().handleLogout();
             },
             tooltip: 'Sair',
           ),
         ],
       ),
-      // ... O resto do seu widget _DoctorDashboard não precisa mudar
-      // (SingleChildScrollView, Card, GridView, etc.)
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -109,10 +111,10 @@ class _DoctorDashboard extends StatelessWidget {
               children: [
                 _buildActionCard(
                   context,
-                  icon: Icons.people_alt_outlined,
+                  icon: Icons.chat_bubble_outline_rounded,
                   label: 'Ver Pacientes',
                   color: Colors.blue.shade700,
-                  onTap: () => context.go('/lista-usuarios'),
+                  onTap: () => context.go('/conversas'),
                 ),
                 _buildActionCard(
                   context,
@@ -133,7 +135,6 @@ class _DoctorDashboard extends StatelessWidget {
     );
   }
 
-  // O método _buildActionCard não precisa de alterações
   Widget _buildActionCard(
     BuildContext context, {
     required IconData icon,
@@ -165,15 +166,11 @@ class _DoctorDashboard extends StatelessWidget {
   }
 }
 
-// Muda de ConsumerWidget para StatelessWidget
 class _PatientHomeScreen extends StatelessWidget {
   const _PatientHomeScreen();
 
   @override
   Widget build(BuildContext context) {
-    // Acessa a stream do médico via context.watch
-    // A stream agora nos dá um AppUser? diretamente.
-    final AppUser? doctor = context.watch<AppUser?>();
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -183,7 +180,6 @@ class _PatientHomeScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            // Usa context.read para chamar a função
             onPressed: () async {
               await context.read<AuthController>().handleLogout();
             },
@@ -191,44 +187,63 @@ class _PatientHomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          // Como o StreamProvider já lida com os estados,
-          // podemos checar diretamente o dado.
-          child: doctor == null
-              ? const Text('Nenhum médico disponível no momento.')
-              : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.chat_bubble_outline_rounded, size: 80, color: Colors.blue),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Pronto para começar?',
-                      style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+      // CORREÇÃO: Usa um StreamBuilder para buscar o médico no Firestore.
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .where('userType', isEqualTo: 'medico')
+            .limit(1) // Pega apenas o primeiro médico encontrado.
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Erro: ${snapshot.error}'));
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text('Nenhum médico disponível no momento.'));
+          }
+
+          final doctorDoc = snapshot.data!.docs.first;
+          final doctor = AppUser.fromDocumentSnapshot(doctorDoc);
+
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.chat_bubble_outline_rounded, size: 80, color: Colors.blue),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Pronto para começar?',
+                    style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Clique no botão abaixo para iniciar uma conversa segura com o seu médico.',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleMedium?.copyWith(color: Colors.grey.shade600),
+                  ),
+                  const SizedBox(height: 32),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.send_rounded),
+                    label: Text('Iniciar Conversa com ${doctor.nome}'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                      textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Clique no botão abaixo para iniciar uma conversa segura com o seu médico.',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.titleMedium?.copyWith(color: Colors.grey.shade600),
-                    ),
-                    const SizedBox(height: 32),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.send_rounded),
-                      label: const Text('Iniciar Conversa com Médico'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                      ),
-                      onPressed: () {
-                        context.go('/chat', extra: doctor);
-                      },
-                    ),
-                  ],
-                ),
-        ),
+                    onPressed: () {
+                      context.go('/chat', extra: doctor);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }

@@ -30,10 +30,12 @@ class AuthController with ChangeNotifier {
   String? get verificationId => _verificationId;
 
   AuthStatus get authStatus {
-    if (_appUser == null) {
+    final user = _authRepository.currentUser;
+    if (user == null || _appUser == null) {
       return AuthStatus.unauthenticated;
     }
-    if (_appUser!.userType == 'medico' && !_appUser!.emailVerified) {
+    // Garante que o status do email está atualizado
+    if (!user.emailVerified && _appUser!.userType == 'medico') {
       return AuthStatus.emailNotVerified;
     }
     if (_appUser?.status == 'pendente') {
@@ -42,6 +44,11 @@ class AuthController with ChangeNotifier {
     if (_appUser?.status == 'aprovado') {
       return AuthStatus.authenticated;
     }
+    // Caso padrão para paciente ou outros casos
+    if (_appUser != null) {
+       return AuthStatus.authenticated;
+    }
+    
     return AuthStatus.unauthenticated;
   }
 
@@ -91,6 +98,7 @@ class AuthController with ChangeNotifier {
     });
   }
 
+  // MÉTODO PADRONIZADO: Renomeado para handleLogout para consistência.
   Future<void> handleLogout() async {
     await _authRepository.logout();
   }

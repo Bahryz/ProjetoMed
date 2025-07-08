@@ -53,7 +53,7 @@ class AppRouter {
       ),
       GoRoute(
         path: '/conversas',
-        builder: (context, state) => const ListaUsuariosScreen(),  
+        builder: (context, state) => const ListaConversasScreen(),  
       ),
       GoRoute(
         path: '/conversas',
