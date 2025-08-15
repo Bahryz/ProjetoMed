@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:medico_app/features/authentication/data/models/app_user.dart';
 import 'package:medico_app/features/authentication/presentation/controllers/auth_controller.dart';
+import 'package:medico_app/features/chat/services/chat_service.dart';
 import 'package:provider/provider.dart';
 
 class ListaConversasScreen extends StatelessWidget {
@@ -10,18 +11,15 @@ class ListaConversasScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Acessa o AuthController usando Provider para obter o usuário atual.
     final authController = context.watch<AuthController>();
     final currentUser = authController.user;
 
-    // Mostra um indicador de carregamento se o usuário ainda não foi carregado.
     if (currentUser == null) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
-    // Determina qual tipo de usuário deve ser buscado (médicos ou pacientes).
     final String roleToFetch =
         currentUser.userType == 'medico' ? 'paciente' : 'medico';
 
@@ -32,16 +30,13 @@ class ListaConversasScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () {
-              // CORREÇÃO: Chamada padronizada para o método 'handleLogout'.
               context.read<AuthController>().handleLogout();
             },
             tooltip: 'Sair',
           ),
         ],
-        automaticallyImplyLeading: false,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        // Cria um stream que busca os usuários do tipo desejado no Firestore.
         stream: FirebaseFirestore.instance
             .collection('users')
             .where('userType', isEqualTo: roleToFetch)
@@ -63,8 +58,8 @@ class ListaConversasScreen extends StatelessWidget {
           }
 
           final usersDocs = snapshot.data!.docs;
+          final chatService = ChatService();
 
-          // Constrói a lista de usuários.
           return ListView.builder(
             itemCount: usersDocs.length,
             itemBuilder: (context, index) {
@@ -80,10 +75,29 @@ class ListaConversasScreen extends StatelessWidget {
                   otherUser.userType.substring(0, 1).toUpperCase() +
                       otherUser.userType.substring(1),
                 ),
-                onTap: () {
-                  // NAVEGAÇÃO: Ao tocar, vai para a rota '/chat'
-                  // e passa o objeto 'otherUser' como argumento.
-                  context.go('/chat', extra: otherUser);
+                onTap: () async {
+                  try {
+                    // Garante que a conversa exista no Firestore antes de navegar
+                    await chatService.getOrCreateConversation(
+                      currentUser.uid,
+                      otherUser.uid,
+                    );
+
+                    // Navega para a rota do chat
+                    if (context.mounted) {
+                      context.go('/chat', extra: otherUser);
+                    }
+                  } catch (e) {
+                    // Mostra um erro para o usuário se a criação da conversa falhar
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Não foi possível iniciar o chat: ${e.toString()}'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
                 },
               );
             },

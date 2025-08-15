@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:medico_app/features/authentication/data/models/app_user.dart';
 import 'package:medico_app/features/authentication/presentation/controllers/auth_controller.dart';
-import 'package:medico_app/features/authentication/presentation/screens/chat_screen.dart';
 import 'package:medico_app/features/authentication/presentation/screens/login_screen.dart';
 import 'package:medico_app/features/authentication/presentation/screens/pending_approval_screen.dart';
 import 'package:medico_app/features/authentication/presentation/screens/register_medico_screen.dart';
 import 'package:medico_app/features/authentication/presentation/screens/register_paciente_screen.dart';
 import 'package:medico_app/features/authentication/presentation/screens/verify_email_screen.dart';
+import 'package:medico_app/features/chat/presentation/screens/detalhes_chat_screen.dart';
 import 'package:medico_app/features/chat/presentation/screens/home_screen.dart';
 import 'package:medico_app/features/chat/presentation/screens/lista_conversas_screen.dart';
 import 'package:medico_app/features/chat/presentation/screens/lista_usuarios_screen.dart';
@@ -22,68 +22,33 @@ class AppRouter {
     refreshListenable: authController,
     initialLocation: '/login',
     routes: [
-      // Rota principal
-      GoRoute(
-        path: '/',
-        builder: (context, state) => const HomeScreen(),
-      ),
-      // Rotas de Autenticação
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginScreen(),
-      ),
-      GoRoute(
-        path: '/register-paciente',
-        builder: (context, state) => const RegisterPacienteScreen(),
-      ),
-      GoRoute(
-        path: '/register-medico',
-        builder: (context, state) => const RegisterMedicoScreen(),
-      ),
-      // Rotas de Status do Usuário
-      GoRoute(
-        path: '/verify-email',
-        builder: (context, state) => const VerifyEmailScreen(),
-      ),
-      GoRoute(
-        path: '/pending-approval',
-        builder: (context, state) => const PendingApprovalScreen(),
-      ),
-      // Rotas do App
-      GoRoute(
-        path: '/conversas',
-        builder: (context, state) => const ListaConversasScreen(),
-      ),
-      GoRoute(
-        path: '/lista-usuarios',
-        builder: (context, state) => const ListaUsuariosScreen(),
-      ),
-      GoRoute(
-        path: '/configuracoes',
-        builder: (context, state) => const SettingsScreen(),
-      ),
-      // ROTA DO CHAT CORRIGIDA
+      GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
+      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      GoRoute(path: '/register-paciente', builder: (context, state) => const RegisterPacienteScreen()),
+      GoRoute(path: '/register-medico', builder: (context, state) => const RegisterMedicoScreen()),
+      GoRoute(path: '/verify-email', builder: (context, state) => const VerifyEmailScreen()),
+      GoRoute(path: '/pending-approval', builder: (context, state) => const PendingApprovalScreen()),
+      GoRoute(path: '/conversas', builder: (context, state) => const ListaConversasScreen()),
+      GoRoute(path: '/lista-usuarios', builder: (context, state) => const ListaUsuariosScreen()),
+      GoRoute(path: '/configuracoes', builder: (context, state) => const SettingsScreen()),
+      
       GoRoute(
         path: '/chat',
         builder: (context, state) {
-          // Pega o usuário logado e o usuário da conversa
           final currentUser = authController.user;
           final otherUser = state.extra as AppUser?;
 
-          // Fallback de segurança: se algum dos usuários for nulo, volta para a lista.
           if (currentUser == null || otherUser == null) {
             return const ListaConversasScreen();
           }
 
-          // Cria um ID de conversa consistente ordenando os UIDs.
-          // Assim, o ID será sempre o mesmo para os dois usuários.
           final uids = [currentUser.uid, otherUser.uid]..sort();
           final conversationId = uids.join('_');
 
-          // Passa os parâmetros corretos para a ChatScreen
-          return ChatScreen(
-            conversationId: conversationId,
-            recipientName: otherUser.nome, 
+          return DetalhesChatScreen(
+            conversaId: conversationId,
+            destinatarioNome: otherUser.nome,
+            remetenteId: currentUser.uid,
           );
         },
       ),

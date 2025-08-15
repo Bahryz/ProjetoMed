@@ -2,7 +2,7 @@ import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
-import 'package:mime/mime.dart'; // Importe o novo pacote
+import 'package:mime/mime.dart';
 
 class ChatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -78,12 +78,9 @@ class ChatService {
       final path = 'chat_media/$conversaId/$fileName';
       final ref = _storage.ref(path);
 
-      // ** A CORREÇÃO CRUCIAL ESTÁ AQUI **
-      // Determina o MIME Type (Content-Type) do arquivo para o upload.
       final mimeType = lookupMimeType(nomeArquivo);
       final metadata = SettableMetadata(contentType: mimeType);
 
-      // Faz o upload dos dados com os metadados corretos.
       final uploadTask = ref.putData(fileBytes, metadata);
 
       final snapshot = await uploadTask.whenComplete(() => {});
