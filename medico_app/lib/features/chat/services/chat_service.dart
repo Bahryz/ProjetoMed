@@ -7,6 +7,7 @@ class ChatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
+
   Future<String> getOrCreateConversation(
       String currentUserId, String otherUserId) async {
     List<String> userIds = [currentUserId, otherUserId];
@@ -14,14 +15,12 @@ class ChatService {
     String conversaId = userIds.join('_');
 
     final conversationRef = _firestore.collection('conversas').doc(conversaId);
-    final docSnapshot = await conversationRef.get();
 
-    if (!docSnapshot.exists) {
-      await conversationRef.set({
-        'participantes': [currentUserId, otherUserId],
-        'timestampUltimaMensagem': FieldValue.serverTimestamp(),
-      });
-    }
+    
+    await conversationRef.set({
+      'participantes': userIds, 
+      'timestampUltimaMensagem': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
 
     return conversaId;
   }

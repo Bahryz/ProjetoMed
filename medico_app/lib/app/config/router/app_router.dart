@@ -12,6 +12,7 @@ import 'package:medico_app/features/chat/presentation/screens/home_screen.dart';
 import 'package:medico_app/features/chat/presentation/screens/lista_conversas_screen.dart';
 import 'package:medico_app/features/chat/presentation/screens/lista_usuarios_screen.dart';
 import 'package:medico_app/features/settings/presentation/screens/settings_screen.dart';
+import 'package:provider/provider.dart';
 
 class AppRouter {
   final AuthController authController;
@@ -22,16 +23,39 @@ class AppRouter {
     refreshListenable: authController,
     initialLocation: '/login',
     routes: [
-      GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
+      GoRoute(
+        path: '/',
+        builder: (context, state) {
+          final user = Provider.of<AuthController>(context, listen: false).user;
+          if (user == null) {
+            return const Scaffold(
+                body: Center(child: CircularProgressIndicator()));
+          }
+          return HomeScreen(currentUser: user);
+        },
+      ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-      GoRoute(path: '/register-paciente', builder: (context, state) => const RegisterPacienteScreen()),
-      GoRoute(path: '/register-medico', builder: (context, state) => const RegisterMedicoScreen()),
-      GoRoute(path: '/verify-email', builder: (context, state) => const VerifyEmailScreen()),
-      GoRoute(path: '/pending-approval', builder: (context, state) => const PendingApprovalScreen()),
-      GoRoute(path: '/conversas', builder: (context, state) => const ListaConversasScreen()),
-      GoRoute(path: '/lista-usuarios', builder: (context, state) => const ListaUsuariosScreen()),
-      GoRoute(path: '/configuracoes', builder: (context, state) => const SettingsScreen()),
-      
+      GoRoute(
+          path: '/register-paciente',
+          builder: (context, state) => const RegisterPacienteScreen()),
+      GoRoute(
+          path: '/register-medico',
+          builder: (context, state) => const RegisterMedicoScreen()),
+      GoRoute(
+          path: '/verify-email',
+          builder: (context, state) => const VerifyEmailScreen()),
+      GoRoute(
+          path: '/pending-approval',
+          builder: (context, state) => const PendingApprovalScreen()),
+      GoRoute(
+          path: '/conversas',
+          builder: (context, state) => const ListaConversasScreen()),
+      GoRoute(
+          path: '/lista-usuarios',
+          builder: (context, state) => const ListaUsuariosScreen()),
+      GoRoute(
+          path: '/configuracoes',
+          builder: (context, state) => const SettingsScreen()),
       GoRoute(
         path: '/chat',
         builder: (context, state) {
@@ -55,8 +79,13 @@ class AppRouter {
     ],
     redirect: (BuildContext context, GoRouterState state) {
       final status = authController.authStatus;
-      final unauthenticatedRoutes = ['/login', '/register-paciente', '/register-medico'];
-      final isGoingToUnauthenticatedRoute = unauthenticatedRoutes.contains(state.matchedLocation);
+      final unauthenticatedRoutes = [
+        '/login',
+        '/register-paciente',
+        '/register-medico'
+      ];
+      final isGoingToUnauthenticatedRoute =
+          unauthenticatedRoutes.contains(state.matchedLocation);
       final currentLocation = state.matchedLocation;
 
       switch (status) {
@@ -65,7 +94,9 @@ class AppRouter {
         case AuthStatus.emailNotVerified:
           return currentLocation == '/verify-email' ? null : '/verify-email';
         case AuthStatus.pendingApproval:
-          return currentLocation == '/pending-approval' ? null : '/pending-approval';
+          return currentLocation == '/pending-approval'
+              ? null
+              : '/pending-approval';
         case AuthStatus.authenticated:
           if (isGoingToUnauthenticatedRoute) {
             return '/';

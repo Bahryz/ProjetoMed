@@ -1,259 +1,281 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 import 'package:medico_app/features/authentication/data/models/app_user.dart';
 import 'package:medico_app/features/authentication/presentation/controllers/auth_controller.dart';
+import 'package:medico_app/features/chat/presentation/screens/lista_conversas_screen.dart';
 import 'package:medico_app/features/chat/services/chat_service.dart';
+import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 
+// HomeScreen agora apenas recebe o currentUser e decide qual layout mostrar.
+// Não precisa mais de aceder aos providers, evitando o erro.
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  final AppUser currentUser;
+
+  const HomeScreen({super.key, required this.currentUser});
 
   @override
   Widget build(BuildContext context) {
-    final userType = context.watch<AuthController>().user?.userType;
-
-    if (userType == null) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
-    if (userType == 'paciente') {
-      return const _PatientHomeScreen();
+    if (currentUser.userType == 'medico') {
+      return _DoctorHomeScreen(currentUser: currentUser);
     } else {
-      return const _DoctorDashboard();
+      return _PatientHomeScreenWithTabs(currentUser: currentUser);
     }
   }
 }
 
-class _DoctorDashboard extends StatelessWidget {
-  const _DoctorDashboard();
+//-------------------------------------------------------------------
+// NAVEGAÇÃO E TELAS DO PACIENTE
+//-------------------------------------------------------------------
+
+class _PatientHomeScreenWithTabs extends StatefulWidget {
+  final AppUser currentUser;
+
+  const _PatientHomeScreenWithTabs({required this.currentUser});
+
+  @override
+  State<_PatientHomeScreenWithTabs> createState() =>
+      _PatientHomeScreenWithTabsState();
+}
+
+class _PatientHomeScreenWithTabsState extends State<_PatientHomeScreenWithTabs> {
+  int _selectedIndex = 0;
+  late final List<Widget> _widgetOptions;
+
+  @override
+  void initState() {
+    super.initState();
+    _widgetOptions = <Widget>[
+      _PatientHomeScreen(currentUser: widget.currentUser),
+      const ListaConversasScreen(),
+    ];
+  }
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final authController = context.watch<AuthController>();
-    final user = authController.user;
-    final theme = Theme.of(context);
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Painel do Médico',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: theme.scaffoldBackgroundColor,
-        elevation: 0,
+        title:
+            Text(_selectedIndex == 0 ? 'Encontrar Médico' : 'Minhas Conversas'),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await context.read<AuthController>().handleLogout();
             },
-            tooltip: 'Sair',
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Row(
-                  children: [
-                    const CircleAvatar(
-                      radius: 30,
-                      backgroundColor: Colors.blueGrey,
-                      child: Icon(Icons.person, size: 30, color: Colors.white),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Bem-vindo(a),',
-                            style: theme.textTheme.titleMedium?.copyWith(color: Colors.grey.shade600),
-                          ),
-                          Text(
-                            user?.nome ?? 'Doutor(a)',
-                            style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Ações Rápidas',
-              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 12),
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              children: [
-                _buildActionCard(
-                  context,
-                  icon: Icons.chat_bubble_outline_rounded,
-                  label: 'Ver Pacientes',
-                  color: Colors.blue.shade700,
-                  onTap: () => context.go('/lista-usuarios'), // <<-- CORREÇÃO APLICADA AQUI
-                ),
-                _buildActionCard(
-                  context,
-                  icon: Icons.settings_outlined,
-                  label: 'Configurações',
-                  color: Colors.grey.shade700,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Tela de configurações a ser implementada.')),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
+      body: Center(
+        child: _widgetOptions.elementAt(_selectedIndex),
       ),
-    );
-  }
-
-  Widget _buildActionCard(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Card(
-        elevation: 1,
-        color: color,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 40, color: Colors.white),
-            const SizedBox(height: 12),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-          ],
-        ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search),
+            label: 'Médicos',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat_bubble_outline),
+            label: 'Conversas',
+          ),
+        ],
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
       ),
     );
   }
 }
 
 class _PatientHomeScreen extends StatelessWidget {
-  const _PatientHomeScreen();
+  final AppUser currentUser;
+
+  const _PatientHomeScreen({required this.currentUser});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    return StreamBuilder<QuerySnapshot>(
+      // Acede diretamente ao Firestore para evitar problemas de contexto com o Provider
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .where('userType', isEqualTo: 'medico')
+          .limit(1)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Erro: ${snapshot.error}'));
+        }
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text('Nenhum médico encontrado.'));
+        }
 
+        final medicoDoc = snapshot.data!.docs.first;
+        final medico = AppUser.fromDocumentSnapshot(medicoDoc);
+
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Bem-vindo, ${currentUser.nome}!',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 40),
+              ElevatedButton(
+                onPressed: () async {
+                  // CORREÇÃO: Cria uma nova instância do ChatService diretamente.
+                  // Isto resolve o erro "Provider not found" de forma definitiva.
+                  final chatService = ChatService();
+                  await chatService.getOrCreateConversation(
+                    currentUser.uid,
+                    medico.uid,
+                  );
+
+                  if (!context.mounted) return;
+                  context.go('/chat', extra: medico);
+                },
+                child: const Text('Iniciar Conversa'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+//-------------------------------------------------------------------
+// NAVEGAÇÃO E TELAS DO MÉDICO
+//-------------------------------------------------------------------
+
+class _DoctorHomeScreen extends StatefulWidget {
+  final AppUser currentUser;
+
+  const _DoctorHomeScreen({required this.currentUser});
+
+  @override
+  State<_DoctorHomeScreen> createState() => _DoctorHomeScreenState();
+}
+
+class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
+  int _selectedIndex = 0;
+  late final List<Widget> _widgetOptions;
+
+  @override
+  void initState() {
+    super.initState();
+    _widgetOptions = <Widget>[
+      _DoctorDashboard(currentUser: widget.currentUser),
+      const ListaConversasScreen(),
+    ];
+  }
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Fale com o Médico'),
-        centerTitle: true,
+        title: Text(_selectedIndex == 0 ? 'Painel Principal' : 'Conversas'),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await context.read<AuthController>().handleLogout();
             },
-            tooltip: 'Sair',
           ),
         ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('users')
-            .where('userType', isEqualTo: 'medico')
-            .limit(1)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Erro: ${snapshot.error}'));
-          }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text('Nenhum médico disponível no momento.'));
-          }
+      body: Center(
+        child: _widgetOptions.elementAt(_selectedIndex),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard_customize_outlined),
+            label: 'Painel',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat_bubble_outline),
+            label: 'Conversas',
+          ),
+        ],
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+      ),
+    );
+  }
+}
 
-          final doctorDoc = snapshot.data!.docs.first;
-          final doctor = AppUser.fromDocumentSnapshot(doctorDoc);
+class _DoctorDashboard extends StatelessWidget {
+  final AppUser currentUser;
 
-          return Center(
+  const _DoctorDashboard({required this.currentUser});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Card(
+            elevation: 2,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+              padding: const EdgeInsets.all(20.0),
+              child: Row(
                 children: [
-                  const Icon(Icons.chat_bubble_outline_rounded, size: 80, color: Colors.blue),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Pronto para começar?',
-                    style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                  const CircleAvatar(
+                    radius: 30,
+                    child: Icon(Icons.person, size: 30),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Clique no botão abaixo para iniciar uma conversa segura com o seu médico.',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.titleMedium?.copyWith(color: Colors.grey.shade600),
-                  ),
-                  const SizedBox(height: 32),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.send_rounded),
-                    label: Text('Iniciar Conversa com ${doctor.nome}'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                      textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Bem-vindo(a),',
+                          style: theme.textTheme.titleMedium
+                              ?.copyWith(color: Colors.grey.shade600),
+                        ),
+                        Text(
+                          currentUser.nome,
+                          style: theme.textTheme.headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
-                    onPressed: () async {
-                      final authController = context.read<AuthController>();
-                      final chatService = ChatService();
-                      final currentUser = authController.user;
-
-                      if (currentUser != null) {
-                        await chatService.getOrCreateConversation(
-                          currentUser.uid,
-                          doctor.uid,
-                        );
-                        
-                        if (context.mounted) {
-                          context.go('/chat', extra: doctor);
-                        }
-                      }
-                    },
                   ),
                 ],
               ),
             ),
-          );
-        },
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Ações Rápidas',
+            style:
+                theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 12),
+        ],
       ),
     );
   }
