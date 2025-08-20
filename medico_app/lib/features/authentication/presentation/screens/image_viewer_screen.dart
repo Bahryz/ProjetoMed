@@ -13,7 +13,7 @@ class ImageViewerScreen extends StatelessWidget {
   // Função para salvar a imagem
   Future<void> _saveImage(BuildContext context) async {
     // Exibe uma snackbar de feedback
-    _showSnackBar(String message, {bool isError = false}) {
+    showSnackBar(String message, {bool isError = false}) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -36,11 +36,11 @@ class ImageViewerScreen extends StatelessWidget {
       } else {
         // Em mobile (Android/iOS), salva diretamente na galeria
         await GallerySaver.saveImage(imageUrl);
-        _showSnackBar('Imagem salva na galeria com sucesso!');
+        showSnackBar('Imagem salva na galeria com sucesso!');
       }
     } catch (e) {
       debugPrint("Erro ao salvar imagem: $e");
-      _showSnackBar('Erro ao salvar a imagem.', isError: true);
+      showSnackBar('Erro ao salvar a imagem.', isError: true);
     }
   }
 

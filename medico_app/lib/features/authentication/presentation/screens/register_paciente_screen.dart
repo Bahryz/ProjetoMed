@@ -167,8 +167,9 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                           keyboardType: TextInputType.emailAddress,
                           validator: (v) {
                             if (v?.isEmpty ?? true) return 'Campo obrigatório';
-                            if (!v!.contains('@') || !v.contains('.'))
+                            if (!v!.contains('@') || !v.contains('.')) {
                               return 'Email inválido';
+                            }
                             return null;
                           },
                         ),
@@ -195,8 +196,9 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                           inputFormatters: [_cpfFormatter],
                           validator: (v) {
                             if (v?.isEmpty ?? true) return 'Campo obrigatório';
-                            if (_cpfFormatter.getUnmaskedText().length != 11)
+                            if (_cpfFormatter.getUnmaskedText().length != 11) {
                               return 'CPF inválido';
+                            }
                             return null;
                           },
                         ),
@@ -271,8 +273,9 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                           ),
                           validator: (v) {
                             if (v?.isEmpty ?? true) return 'Campo obrigatório';
-                            if (v != _passwordController.text)
+                            if (v != _passwordController.text) {
                               return 'As senhas não coincidem';
+                            }
                             return null;
                           },
                         ),

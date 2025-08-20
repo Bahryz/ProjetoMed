@@ -1,9 +1,8 @@
-// ListaUsuariosScreen.dart
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:medico_app/features/authentication/data/models/app_user.dart';
 import 'package:medico_app/features/authentication/presentation/controllers/auth_controller.dart';
+import 'package:medico_app/features/chat/services/chat_service.dart'; // Importar o ChatService
 import 'package:provider/provider.dart';
 
 class ListaUsuariosScreen extends StatefulWidget {
@@ -16,6 +15,7 @@ class ListaUsuariosScreen extends StatefulWidget {
 class _ListaUsuariosScreenState extends State<ListaUsuariosScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  bool _isCreatingConversation = false; // Estado para controlar o loading
 
   @override
   void initState() {
@@ -52,9 +52,8 @@ class _ListaUsuariosScreenState extends State<ListaUsuariosScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            tooltip: 'Sair', 
+            tooltip: 'Sair',
             onPressed: () async {
-              
               await context.read<AuthController>().handleLogout();
             },
           ),
@@ -79,24 +78,36 @@ class _ListaUsuariosScreenState extends State<ListaUsuariosScreen> {
             ),
           ),
           Expanded(
-            child: filteredUsers.isEmpty
-                ? const Center(
-                    child: Text('Nenhum paciente encontrado.'),
-                  )
-                : ListView.builder(
-                    itemCount: filteredUsers.length,
-                    itemBuilder: (context, index) {
-                      final user = filteredUsers[index];
-                      return _buildUserTile(user);
-                    },
+            child: Stack(
+              children: [
+                filteredUsers.isEmpty
+                    ? const Center(
+                        child: Text('Nenhum paciente encontrado.'),
+                      )
+                    : ListView.builder(
+                        itemCount: filteredUsers.length,
+                        itemBuilder: (context, index) {
+                          final user = filteredUsers[index];
+                          return _buildUserTile(context, user);
+                        },
+                      ),
+                // --- MELHORIA: INDICADOR DE CARREGAMENTO ---
+                if (_isCreatingConversation)
+                  Container(
+                    color: Colors.black.withOpacity(0.1),
+                    child: const Center(
+                      child: CircularProgressIndicator(),
+                    ),
                   ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildUserTile(AppUser user) {
+  Widget _buildUserTile(BuildContext context, AppUser user) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
       child: Card(
@@ -115,8 +126,34 @@ class _ListaUsuariosScreenState extends State<ListaUsuariosScreen> {
               style: const TextStyle(fontWeight: FontWeight.w600)),
           subtitle: const Text('Paciente - Toque para conversar'),
           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-          onTap: () {
-            context.go('/chat', extra: user);
+          onTap: () async {
+            if (_isCreatingConversation) return; // Evita múltiplos cliques
+
+            setState(() {
+              _isCreatingConversation = true;
+            });
+
+            final authController = context.read<AuthController>();
+            final chatService = ChatService();
+            final currentUser = authController.user;
+
+            if (currentUser != null) {
+              await chatService.getOrCreateConversation(
+                currentUser.uid,
+                user.uid,
+              );
+
+              if (context.mounted) {
+                context.go('/chat', extra: user);
+              }
+            }
+            
+            // Garante que o estado seja atualizado mesmo se o widget for reconstruído
+            if(mounted) {
+              setState(() {
+                _isCreatingConversation = false;
+              });
+            }
           },
         ),
       ),

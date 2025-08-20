@@ -1,9 +1,6 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:medico_app/features/authentication/presentation/screens/image_viewer_screen.dart';
 import 'package:medico_app/features/chat/services/chat_service.dart';
 import 'package:url_launcher/url_launcher.dart';

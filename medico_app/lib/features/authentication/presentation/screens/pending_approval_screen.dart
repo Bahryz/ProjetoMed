@@ -19,7 +19,7 @@ class PendingApprovalScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
+              const Icon(
                 Icons.hourglass_top_rounded,
                 size: 80,
                 color: primaryColor,

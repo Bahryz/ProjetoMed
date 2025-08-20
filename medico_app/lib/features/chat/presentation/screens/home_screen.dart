@@ -4,16 +4,15 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:medico_app/features/authentication/data/models/app_user.dart';
 import 'package:medico_app/features/authentication/presentation/controllers/auth_controller.dart';
+import 'package:medico_app/features/chat/services/chat_service.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Acessa o tipo de usuário para decidir qual tela mostrar.
     final userType = context.watch<AuthController>().user?.userType;
 
-    // Se o tipo de usuário ainda não foi carregado, mostra um indicador.
     if (userType == null) {
       return const Scaffold(
         body: Center(
@@ -51,7 +50,6 @@ class _DoctorDashboard extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
-              // Chama o método handleLogout que está no AuthController.
               await context.read<AuthController>().handleLogout();
             },
             tooltip: 'Sair',
@@ -114,7 +112,7 @@ class _DoctorDashboard extends StatelessWidget {
                   icon: Icons.chat_bubble_outline_rounded,
                   label: 'Ver Pacientes',
                   color: Colors.blue.shade700,
-                  onTap: () => context.go('/conversas'),
+                  onTap: () => context.go('/lista-usuarios'), // <<-- CORREÇÃO APLICADA AQUI
                 ),
                 _buildActionCard(
                   context,
@@ -187,12 +185,11 @@ class _PatientHomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      // CORREÇÃO: Usa um StreamBuilder para buscar o médico no Firestore.
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('users')
             .where('userType', isEqualTo: 'medico')
-            .limit(1) // Pega apenas o primeiro médico encontrado.
+            .limit(1)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -235,8 +232,21 @@ class _PatientHomeScreen extends StatelessWidget {
                       textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                     ),
-                    onPressed: () {
-                      context.go('/chat', extra: doctor);
+                    onPressed: () async {
+                      final authController = context.read<AuthController>();
+                      final chatService = ChatService();
+                      final currentUser = authController.user;
+
+                      if (currentUser != null) {
+                        await chatService.getOrCreateConversation(
+                          currentUser.uid,
+                          doctor.uid,
+                        );
+                        
+                        if (context.mounted) {
+                          context.go('/chat', extra: doctor);
+                        }
+                      }
                     },
                   ),
                 ],

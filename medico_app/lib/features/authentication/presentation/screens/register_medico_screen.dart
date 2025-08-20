@@ -320,8 +320,9 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
                           ),
                           validator: (v) {
                             if (v?.isEmpty ?? true) return 'Campo obrigatório';
-                            if (v != _passwordController.text)
+                            if (v != _passwordController.text) {
                               return 'As senhas não coincidem';
+                            }
                             return null;
                           },
                         ),
