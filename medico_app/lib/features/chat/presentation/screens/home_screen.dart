@@ -141,7 +141,7 @@ class _PatientHomeScreen extends StatelessWidget {
                   );
 
                   if (!context.mounted) return;
-                  context.go('/chat', extra: medico);
+                  context.push('/chat', extra: medico);
                 },
                 child: const Text('Iniciar Conversa'),
               ),

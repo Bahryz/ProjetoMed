@@ -126,8 +126,8 @@ class _ConversationTile extends StatelessWidget {
           ),
           trailing: Text(tempo),
           onTap: () {
-            // A navegação continua a mesma, agora com os dados corretos
-            context.go('/chat', extra: otherUser);
+            // ALTERAÇÃO APLICADA AQUI
+            context.push('/chat', extra: otherUser);
           },
         );
       },

@@ -144,11 +144,11 @@ class _ListaUsuariosScreenState extends State<ListaUsuariosScreen> {
               );
 
               if (context.mounted) {
-                context.go('/chat', extra: user);
+                // ALTERAÇÃO APLICADA AQUI
+                context.push('/chat', extra: user);
               }
             }
             
-            // Garante que o estado seja atualizado mesmo se o widget for reconstruído
             if(mounted) {
               setState(() {
                 _isCreatingConversation = false;

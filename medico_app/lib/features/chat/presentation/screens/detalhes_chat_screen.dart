@@ -30,7 +30,7 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
   static const Color primaryColor = Color(0xFFB89453);
   static const Color accentColor = Color(0xFF4A4A4A);
   // MODIFICAÇÃO: Cor de fundo para o chat
-  static const Color backgroundColor = Color(0xFFECE5DD); 
+  static const Color backgroundColor = Color(0xFFECE5DD);
   static const Color senderBubbleColor = Color(0xFFE7FFDB); // Cor de balão estilo WhatsApp
   static const Color receiverBubbleColor = Colors.white;
 
@@ -63,7 +63,7 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       // MODIFICAÇÃO: A cor de fundo agora é aplicada aqui
-      backgroundColor: backgroundColor, 
+      backgroundColor: backgroundColor,
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -97,7 +97,7 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return _buildEmptyChatWidget();
                 }
-                
+
                 // --- FIM DAS MODIFICAÇÕES IMPORTANTES ---
 
                 final mensagens = snapshot.data!.docs;
@@ -208,7 +208,7 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
     final nomeArquivo = mensagem['nomeArquivo'] as String?;
 
     final bubbleColor = isMe ? senderBubbleColor : receiverBubbleColor;
-    final textColor = isMe ? Colors.white : accentColor;
+    final textColor = isMe ? Colors.black : accentColor;
     final borderRadius = BorderRadius.only(
       topLeft: const Radius.circular(20),
       topRight: const Radius.circular(20),
@@ -249,7 +249,7 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.insert_drive_file, color: isMe ? Colors.white70 : Colors.black54),
+              Icon(Icons.insert_drive_file, color: isMe ? Colors.black54 : Colors.black54),
               const SizedBox(width: 8),
               Flexible(child: Text(nomeArquivo ?? 'Arquivo', style: TextStyle(color: textColor, decoration: TextDecoration.underline))),
             ],
