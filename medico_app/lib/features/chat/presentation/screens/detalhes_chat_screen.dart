@@ -1,6 +1,12 @@
+// bahryz/projetomed/ProjetoMed-6502db256f60032b63be3b6019c0ea07dd298519/medico_app/lib/features/chat/presentation/screens/detalhes_chat_screen.dart
+
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:medico_app/features/authentication/presentation/screens/image_viewer_screen.dart';
 import 'package:medico_app/features/chat/services/chat_service.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -29,9 +35,8 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
 
   static const Color primaryColor = Color(0xFFB89453);
   static const Color accentColor = Color(0xFF4A4A4A);
-  // MODIFICAÇÃO: Cor de fundo para o chat
   static const Color backgroundColor = Color(0xFFECE5DD);
-  static const Color senderBubbleColor = Color(0xFFE7FFDB); // Cor de balão estilo WhatsApp
+  static const Color senderBubbleColor = Color(0xFFE7FFDB);
   static const Color receiverBubbleColor = Colors.white;
 
   void _showErrorSnackBar(String message) {
@@ -55,14 +60,54 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
     }
   }
 
-  void _enviarMidia({bool daGaleria = false}) async {
-    // ... (código para enviar mídia permanece o mesmo)
+  // --- IMPLEMENTAÇÃO CORRIGIDA ---
+  // Função para enviar imagens ou documentos
+  Future<void> _enviarArquivo(String tipo) async {
+    try {
+      if (kIsWeb) {
+        // Lógica para Web
+        FilePickerResult? result = await FilePicker.platform.pickFiles(
+          type: tipo == 'imagem' ? FileType.image : FileType.any,
+        );
+        if (result != null && result.files.single.bytes != null) {
+          final fileBytes = result.files.single.bytes!;
+          final fileName = result.files.single.name;
+          await _chatService.enviarArquivo(
+              widget.conversaId, widget.remetenteId, fileBytes, fileName, tipo);
+        }
+      } else {
+        // Lógica para Mobile (iOS/Android)
+        if (tipo == 'imagem') {
+          final picker = ImagePicker();
+          final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+          if (pickedFile != null) {
+            final fileBytes = await pickedFile.readAsBytes();
+            await _chatService.enviarArquivo(widget.conversaId,
+                widget.remetenteId, fileBytes, pickedFile.name, 'imagem');
+          }
+        } else {
+          FilePickerResult? result = await FilePicker.platform.pickFiles(
+            type: FileType.custom,
+            allowedExtensions: ['pdf', 'doc', 'docx'],
+          );
+          if (result != null && result.files.single.path != null) {
+             final file = result.files.single;
+             // CORREÇÃO: Lê os bytes diretamente do caminho do arquivo
+             final fileBytes = await File(file.path!).readAsBytes();
+            await _chatService.enviarArquivo(
+                widget.conversaId, widget.remetenteId, fileBytes, file.name, 'arquivo');
+          }
+        }
+      }
+    } catch (e) {
+      _showErrorSnackBar('Ocorreu um erro ao selecionar o arquivo: $e');
+    }
   }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // MODIFICAÇÃO: A cor de fundo agora é aplicada aqui
       backgroundColor: backgroundColor,
       appBar: AppBar(
         leading: IconButton(
@@ -70,7 +115,8 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
           onPressed: () => context.pop(),
         ),
         title: Text(widget.destinatarioNome,
-            style: const TextStyle(color: accentColor, fontWeight: FontWeight.bold)),
+            style:
+                const TextStyle(color: accentColor, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         elevation: 1.0,
         iconTheme: const IconThemeData(color: accentColor),
@@ -81,11 +127,7 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
             child: StreamBuilder<QuerySnapshot>(
               stream: _chatService.getMensagensStream(widget.conversaId),
               builder: (context, snapshot) {
-                // --- INÍCIO DAS MODIFICAÇÕES IMPORTANTES ---
-
-                // 1. TELA DE ERRO DETALHADA
                 if (snapshot.hasError) {
-                  // Isso vai exibir o erro exato na tela para sabermos o que está acontecendo
                   return _buildErrorWidget(snapshot.error.toString());
                 }
 
@@ -93,12 +135,9 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                // 2. NOVA TELA DE CHAT VAZIO (Estilo WhatsApp)
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return _buildEmptyChatWidget();
                 }
-
-                // --- FIM DAS MODIFICAÇÕES IMPORTANTES ---
 
                 final mensagens = snapshot.data!.docs;
                 return ListView.builder(
@@ -109,14 +148,18 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
                   itemBuilder: (context, index) {
                     final mensagemDoc = mensagens[index];
                     final data = mensagemDoc.data();
-                    final mensagemData = (data != null && data is Map<String, dynamic>)
-                        ? data
-                        : <String, dynamic>{};
+                    final mensagemData =
+                        (data != null && data is Map<String, dynamic>)
+                            ? data
+                            : <String, dynamic>{};
 
-                    final bool isMe = mensagemData['remetenteId'] == widget.remetenteId;
+                    final bool isMe =
+                        mensagemData['remetenteId'] == widget.remetenteId;
 
-                    if (!isMe && (mensagemData['statusLeitura'] ?? 'enviado') != 'lido') {
-                      _chatService.marcarComoLida(widget.conversaId, mensagemDoc.id);
+                    if (!isMe &&
+                        (mensagemData['statusLeitura'] ?? 'enviado') != 'lido') {
+                      _chatService.marcarComoLida(
+                          widget.conversaId, mensagemDoc.id);
                     }
                     return _buildMessageBubble(mensagemData, isMe);
                   },
@@ -130,17 +173,15 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
     );
   }
 
-  // NOVO WIDGET: Para exibir o erro detalhado
   Widget _buildErrorWidget(String error) {
     return Center(
       child: Container(
         padding: const EdgeInsets.all(16.0),
         margin: const EdgeInsets.all(16.0),
         decoration: BoxDecoration(
-          color: Colors.red.shade100,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.red.shade300)
-        ),
+            color: Colors.red.shade100,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.red.shade300)),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -161,7 +202,8 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
             const Text(
               "Verifique se as regras de segurança do Firestore foram publicadas corretamente.",
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.black54, fontStyle: FontStyle.italic),
+              style:
+                  TextStyle(color: Colors.black54, fontStyle: FontStyle.italic),
             ),
           ],
         ),
@@ -169,7 +211,6 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
     );
   }
 
-  // NOVO WIDGET: Para a tela de chat vazio
   Widget _buildEmptyChatWidget() {
     return Center(
       child: Column(
@@ -220,17 +261,27 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
     switch (tipo) {
       case 'imagem':
         conteudoWidget = GestureDetector(
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ImageViewerScreen(imageUrl: conteudo))),
+          onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => ImageViewerScreen(imageUrl: conteudo))),
           child: ClipRRect(
             borderRadius: borderRadius,
             child: CachedNetworkImage(
               imageUrl: conteudo,
               fit: BoxFit.cover,
-              placeholder: (context, url) => Container(height: 200, color: Colors.grey[200], child: const Center(child: CircularProgressIndicator())),
+              placeholder: (context, url) => Container(
+                  height: 200,
+                  color: Colors.grey[200],
+                  child: const Center(child: CircularProgressIndicator())),
               errorWidget: (context, url, error) => Container(
                 padding: const EdgeInsets.all(16),
                 color: Colors.grey[200],
-                child: const Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.error, color: Colors.red), SizedBox(height: 8), Text("Falha ao carregar", style: TextStyle(color: Colors.red))]),
+                child: const Column(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.error, color: Colors.red),
+                  SizedBox(height: 8),
+                  Text("Falha ao carregar", style: TextStyle(color: Colors.red))
+                ]),
               ),
             ),
           ),
@@ -249,24 +300,41 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.insert_drive_file, color: isMe ? Colors.black54 : Colors.black54),
+              Icon(Icons.insert_drive_file,
+                  color: isMe ? Colors.black54 : Colors.black54),
               const SizedBox(width: 8),
-              Flexible(child: Text(nomeArquivo ?? 'Arquivo', style: TextStyle(color: textColor, decoration: TextDecoration.underline))),
+              Flexible(
+                  child: Text(nomeArquivo ?? 'Arquivo',
+                      style: TextStyle(
+                          color: textColor,
+                          decoration: TextDecoration.underline))),
             ],
           ),
         );
         break;
       default:
-        conteudoWidget = Text(conteudo, style: TextStyle(color: textColor, fontSize: 16));
+        conteudoWidget =
+            Text(conteudo, style: TextStyle(color: textColor, fontSize: 16));
     }
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 5),
-        padding: tipo == 'imagem' ? EdgeInsets.zero : const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        decoration: BoxDecoration(color: bubbleColor, borderRadius: borderRadius, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5, offset: const Offset(0, 2))]),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+        padding: tipo == 'imagem'
+            ? EdgeInsets.zero
+            : const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        decoration: BoxDecoration(
+            color: bubbleColor,
+            borderRadius: borderRadius,
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 5,
+                  offset: const Offset(0, 2))
+            ]),
+        constraints:
+            BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
         child: conteudoWidget,
       ),
     );
@@ -274,7 +342,12 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
 
   Widget _buildMessageInput() {
     return Container(
-      decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, -5))]),
+      decoration: BoxDecoration(color: Colors.white, boxShadow: [
+        BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 10,
+            offset: const Offset(0, -5))
+      ]),
       padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
       child: SafeArea(
         child: Row(
@@ -286,8 +359,20 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
                   context: context,
                   builder: (context) => Wrap(
                     children: <Widget>[
-                      ListTile(leading: const Icon(Icons.photo_library), title: const Text('Enviar Imagem'), onTap: () {Navigator.of(context).pop(); _enviarMidia(daGaleria: true);}),
-                      ListTile(leading: const Icon(Icons.insert_drive_file), title: const Text('Enviar Documento'), onTap: () {Navigator.of(context).pop(); _enviarMidia(daGaleria: false);}),
+                      ListTile(
+                          leading: const Icon(Icons.photo_library),
+                          title: const Text('Enviar Imagem'),
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            _enviarArquivo('imagem');
+                          }),
+                      ListTile(
+                          leading: const Icon(Icons.insert_drive_file),
+                          title: const Text('Enviar Documento'),
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            _enviarArquivo('arquivo');
+                          }),
                     ],
                   ),
                 );
@@ -300,8 +385,11 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
                   hintText: 'Digite uma mensagem...',
                   filled: true,
                   fillColor: Colors.grey[100],
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(30.0), borderSide: BorderSide.none),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30.0),
+                      borderSide: BorderSide.none),
+                  contentPadding:
+                      const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
                 ),
                 onSubmitted: (value) => _enviarMensagem(),
               ),
