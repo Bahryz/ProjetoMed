@@ -12,6 +12,8 @@ import 'package:medico_app/features/chat/presentation/screens/home_screen.dart';
 import 'package:medico_app/features/chat/presentation/screens/lista_conversas_screen.dart';
 import 'package:medico_app/features/chat/presentation/screens/lista_usuarios_screen.dart';
 import 'package:medico_app/features/settings/presentation/screens/settings_screen.dart';
+import 'package:medico_app/features/documentos/presentation/screens/documentos_screen.dart';
+import 'package:medico_app/features/authentication/presentation/screens/image_viewer_screen.dart';
 import 'package:provider/provider.dart';
 
 class AppRouter {
@@ -35,6 +37,19 @@ class AppRouter {
         },
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      GoRoute(
+          path: '/documentos',
+          builder: (context, state) => const DocumentosScreen()),
+      GoRoute(
+        path: '/image-viewer',
+        builder: (context, state) {
+          final imageUrl = state.extra as String?;
+          if (imageUrl == null) {
+            return const Scaffold(body: Center(child: Text("URL da imagem não fornecida.")));
+          }
+          return ImageViewerScreen(imageUrl: imageUrl);
+        },
+      ),
       GoRoute(
           path: '/register-paciente',
           builder: (context, state) => const RegisterPacienteScreen()),

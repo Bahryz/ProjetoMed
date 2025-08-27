@@ -99,6 +99,18 @@ class ChatService {
         'statusLeitura': 'enviado',
       });
 
+      final userIds = conversaId.split('_');
+      final destinatarioId = userIds.firstWhere((id) => id != remetenteId);
+
+      await _firestore.collection('documentos').add({
+        'remetenteId': remetenteId,
+        'destinatarioId': destinatarioId,
+        'nomeArquivo': nomeArquivo,
+        'url': downloadUrl,
+        'tipo': tipo,
+        'dataUpload': FieldValue.serverTimestamp(),
+      });
+
       await _firestore.collection('conversas').doc(conversaId).update({
         'ultimaMensagem': tipo == 'imagem' ? '📷 Foto' : '📄 $nomeArquivo',
         'timestampUltimaMensagem': FieldValue.serverTimestamp(),

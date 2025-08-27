@@ -8,6 +8,7 @@ import 'package:medico_app/features/chat/presentation/screens/lista_conversas_sc
 import 'package:medico_app/features/chat/services/chat_service.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:medico_app/features/documentos/presentation/screens/documentos_screen.dart';
 
 // Paleta de cores definida para ser usada em toda a tela.
 const Color primaryColor = Color(0xFFB89453);
@@ -47,7 +48,7 @@ class _DoctorHomeScreen extends StatelessWidget {
     final List<Widget> tabViews = [
       const ListaConversasScreen(),
       const _PlaceholderScreen(title: 'Área Médica'),
-      const _PlaceholderScreen(title: 'Documentos'),
+      const DocumentosScreen(),
       const _PlaceholderScreen(title: 'Chamadas'),
     ];
 
@@ -85,7 +86,7 @@ class _PatientHomeScreen extends StatelessWidget {
     final List<Widget> tabViews = [
       _PatientDoctorTab(currentUser: currentUser),
       const ListaConversasScreen(), // A tela de chats é incluída aqui
-      const _PlaceholderScreen(title: 'Documentos'),
+      const DocumentosScreen(),
       const _PlaceholderScreen(title: 'Chamadas'),
     ];
 
