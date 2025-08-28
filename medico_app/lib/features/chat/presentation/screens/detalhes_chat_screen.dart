@@ -84,7 +84,7 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
             }
           }
           await _chatService.enviarArquivo(
-              widget.conversaId, widget.remetenteId, fileBytes, fileName, tipo);
+              widget.conversaId, widget.remetenteId, fileBytes, fileName, finalTipo);
         }
       } else {
         // Lógica para Mobile (iOS/Android)
@@ -113,7 +113,7 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
                finalTipo = 'outro';
               }
             await _chatService.enviarArquivo(
-                widget.conversaId, widget.remetenteId, fileBytes, file.name, 'arquivo');
+                widget.conversaId, widget.remetenteId, fileBytes, file.name, finalTipo);
           }
         }
       }
