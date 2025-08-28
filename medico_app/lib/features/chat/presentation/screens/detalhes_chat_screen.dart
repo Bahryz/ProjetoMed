@@ -72,6 +72,17 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
         if (result != null && result.files.single.bytes != null) {
           final fileBytes = result.files.single.bytes!;
           final fileName = result.files.single.name;
+          String finalTipo;
+          if (tipo == 'imagem') {
+            finalTipo = 'imagem';
+          } else {
+            final extension = fileName.split('.').last.toLowerCase();
+            if (extension == 'pdf') {
+              finalTipo = 'pdf';
+            } else {
+              finalTipo = 'outro';
+            }
+          }
           await _chatService.enviarArquivo(
               widget.conversaId, widget.remetenteId, fileBytes, fileName, tipo);
         }
@@ -94,6 +105,13 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
              final file = result.files.single;
              // CORREÇÃO: Lê os bytes diretamente do caminho do arquivo
              final fileBytes = await File(file.path!).readAsBytes();
+             String finalTipo;
+             final extension = file.name.split('.').last.toLowerCase();
+             if (extension == 'pdf') {
+               finalTipo = 'pdf';
+              } else {
+               finalTipo = 'outro';
+              }
             await _chatService.enviarArquivo(
                 widget.conversaId, widget.remetenteId, fileBytes, file.name, 'arquivo');
           }
