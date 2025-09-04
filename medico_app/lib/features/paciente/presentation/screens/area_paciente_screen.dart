@@ -7,7 +7,6 @@ class AreaPacienteScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
@@ -61,9 +60,6 @@ class _FeatureCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 2,
-      shadowColor: Colors.black12,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
         leading: CircleAvatar(
@@ -76,7 +72,7 @@ class _FeatureCard extends StatelessWidget {
           padding: const EdgeInsets.only(top: 4.0),
           child: Text(subtitle),
         ),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+        trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[600]),
         onTap: onTap,
       ),
     );

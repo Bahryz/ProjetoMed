@@ -121,18 +121,9 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
   Widget build(BuildContext context) {
     final authController = context.watch<AuthController>();
     final isLoading = authController.isLoading;
-
-    const primaryColor = Color(0xFFB89453);
-
-    const inputDecoration = InputDecoration(
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.all(Radius.circular(12.0)),
-      ),
-      contentPadding: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-    );
+    final primaryColor = Theme.of(context).primaryColor;
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -144,15 +135,12 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.medical_services_outlined, size: 60, color: primaryColor),
+              Icon(Icons.medical_services_outlined, size: 60, color: primaryColor),
               const SizedBox(height: 10),
               const Text('Conta Profissional', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
-              const Text('Informe seus dados para o cadastro', style: TextStyle(fontSize: 16, color: Colors.grey)),
+              Text('Informe seus dados para o cadastro', style: TextStyle(fontSize: 16, color: Colors.grey[400])),
               const SizedBox(height: 30),
               Card(
-                elevation: 4,
-                shadowColor: Colors.black12,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 child: Padding(
                   padding: const EdgeInsets.all(24.0),
                   child: Form(
@@ -163,9 +151,9 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
                         TextFormField(
                           controller: _nomeController,
                           enabled: !isLoading,
-                          decoration: inputDecoration.copyWith(
+                          decoration: const InputDecoration(
                             labelText: 'Nome Completo',
-                            prefixIcon: const Icon(Icons.person_outline),
+                            prefixIcon: Icon(Icons.person_outline),
                           ),
                           validator: (v) => (v?.isEmpty ?? true) ? 'Campo obrigatório' : null,
                         ),
@@ -173,9 +161,9 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
                         TextFormField(
                           controller: _emailController,
                           enabled: !isLoading,
-                          decoration: inputDecoration.copyWith(
+                          decoration: const InputDecoration(
                             labelText: 'Email',
-                            prefixIcon: const Icon(Icons.email_outlined),
+                            prefixIcon: Icon(Icons.email_outlined),
                           ),
                           keyboardType: TextInputType.emailAddress,
                           validator: (v) {
@@ -193,9 +181,9 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
                               child: TextFormField(
                                 controller: _crmController,
                                 enabled: !isLoading,
-                                decoration: inputDecoration.copyWith(
+                                decoration: const InputDecoration(
                                   labelText: 'Número CRM',
-                                  prefixIcon: const Icon(Icons.badge_outlined),
+                                  prefixIcon: Icon(Icons.badge_outlined),
                                 ),
                                 keyboardType: TextInputType.number,
                                 validator: (value) {
@@ -216,7 +204,7 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
                             Expanded(
                               flex: 2,
                               child: DropdownButtonFormField<String>(
-                                decoration: inputDecoration.copyWith(labelText: 'UF'),
+                                decoration: const InputDecoration(labelText: 'UF'),
                                 value: _selectedUF,
                                 items: _estados.map((String estado) {
                                   return DropdownMenuItem<String>(
@@ -237,7 +225,7 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
                         const SizedBox(height: 16),
                         IntlPhoneField(
                           enabled: !isLoading,
-                          decoration: inputDecoration.copyWith(
+                          decoration: const InputDecoration(
                             labelText: 'Telefone',
                             counterText: "",
                           ),
@@ -252,7 +240,7 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
                           controller: _passwordController,
                           enabled: !isLoading,
                           obscureText: _isPasswordObscured,
-                          decoration: inputDecoration.copyWith(
+                          decoration: InputDecoration(
                             labelText: 'Senha',
                             prefixIcon: const Icon(Icons.lock_outline),
                             suffixIcon: IconButton(
@@ -283,7 +271,7 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
                             children: [
                               LinearProgressIndicator(
                                 value: _passwordStrength,
-                                backgroundColor: Colors.grey[300],
+                                backgroundColor: Colors.grey[800],
                                 minHeight: 6,
                                 valueColor: AlwaysStoppedAnimation<Color>(
                                     _getStrengthColor(_passwordStrength)),
@@ -303,7 +291,7 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
                           controller: _confirmPasswordController,
                           enabled: !isLoading,
                           obscureText: _isConfirmPasswordObscured,
-                          decoration: inputDecoration.copyWith(
+                          decoration: InputDecoration(
                             labelText: 'Confirmar Senha',
                             prefixIcon: const Icon(Icons.lock_outline),
                             suffixIcon: IconButton(
@@ -328,14 +316,6 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
                         ),
                         const SizedBox(height: 30),
                         ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryColor,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            disabledBackgroundColor: primaryColor.withOpacity(0.5),
-                          ),
                           onPressed: isLoading ? null : _submit,
                           child: isLoading
                               ? const SizedBox(
@@ -343,10 +323,10 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
                                   width: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 3,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
                                   ),
                                 )
-                              : const Text('Cadastrar', style: TextStyle(fontSize: 16, color: Colors.white)),
+                              : const Text('Cadastrar'),
                         ),
                       ],
                     ),
@@ -356,13 +336,6 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
               const SizedBox(height: 24),
               TextButton(
                 onPressed: isLoading ? null : () => context.go('/login'),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: primaryColor.withAlpha(77)),
-                  ),
-                ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -372,7 +345,6 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
                       'Voltar para o Login',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: primaryColor,
                         fontSize: 16,
                       ),
                     ),
@@ -383,7 +355,7 @@ class _RegisterMedicoScreenState extends State<RegisterMedicoScreen> {
                 const SizedBox(height: 8),
                 Text(
                   authController.errorMessage!,
-                  style: const TextStyle(color: Colors.red, fontSize: 14),
+                  style: const TextStyle(color: Colors.redAccent, fontSize: 14),
                   textAlign: TextAlign.center,
                 ),
               ],

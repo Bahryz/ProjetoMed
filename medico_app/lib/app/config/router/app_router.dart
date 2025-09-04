@@ -1,3 +1,5 @@
+// medico_app/lib/app/config/router/app_router.dart
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:medico_app/features/authentication/data/models/app_user.dart';
@@ -18,7 +20,7 @@ import 'package:medico_app/features/medico/presentation/screens/conteudo_educati
 import 'package:medico_app/features/medico/presentation/screens/feedbacks_screen.dart';
 import 'package:medico_app/features/paciente/presentation/screens/meus_agentamentos.dart';
 import 'package:medico_app/features/paciente/presentation/screens/solicitar_agentamento_screen.dart';
-import 'package:medico_app/features/profile/presentation/screens/profile_screen.dart';
+import 'package:medico_app/features/profile/presentation/screens/profile_screen.dart'; // Importe a nova tela
 import 'package:medico_app/features/settings/presentation/screens/settings_screen.dart';
 import 'package:provider/provider.dart';
 
@@ -78,11 +80,12 @@ class AppRouter {
           path: '/configuracoes',
           builder: (context, state) => const SettingsScreen()),
       
-      // ROTA DE PERFIL
+      // ROTA DE PERFIL ADICIONADA
       GoRoute(
-          path: '/profile',
-          builder: (context, state) => const ProfileScreen()),
-
+        path: '/profile',
+        builder: (context, state) => const ProfileScreen(),
+      ),
+      
       // ROTAS DA ÁREA MÉDICA
       GoRoute(
           path: '/agenda',

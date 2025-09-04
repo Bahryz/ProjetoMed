@@ -1,3 +1,5 @@
+// medico_app/lib/features/documentos/services/documentos_service.dart
+
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
@@ -10,7 +12,6 @@ class DocumentosService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  // Stream para buscar todos os documentos de um paciente
   Stream<List<Documento>> getDocumentosStream(String pacienteId) {
     return _firestore
         .collection('documentos')
@@ -21,21 +22,28 @@ class DocumentosService {
             snapshot.docs.map((doc) => Documento.fromDocumentSnapshot(doc)).toList());
   }
 
-  // Novo método para upload de documentos
   Future<void> uploadDocumento({
     required String remetenteId,
     required String destinatarioId,
   }) async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.any, // Permitir qualquer tipo de arquivo
+        type: FileType.any,
+        withData: kIsWeb, // Pega os bytes apenas se for web
       );
 
-      if (result != null && result.files.single.bytes != null) {
-        final fileBytes = result.files.single.bytes!;
-        final fileName = result.files.single.name;
+      if (result != null) {
+        final file = result.files.single;
+        final fileName = file.name;
+        Uint8List fileBytes;
+
+        // CORREÇÃO: Pega os bytes do caminho no mobile, ou diretamente na web
+        if (kIsWeb) {
+          fileBytes = file.bytes!;
+        } else {
+          fileBytes = await File(file.path!).readAsBytes();
+        }
         
-        // 1. Lógica para determinar o tipo do arquivo
         String fileType;
         final extension = fileName.split('.').last.toLowerCase();
         if (['jpg', 'jpeg', 'png', 'gif'].contains(extension)) {
@@ -46,7 +54,6 @@ class DocumentosService {
           fileType = 'outro';
         }
 
-        // 2. Upload para o Firebase Storage
         final path = 'documentos/$destinatarioId/$fileName';
         final ref = _storage.ref(path);
         
@@ -57,7 +64,6 @@ class DocumentosService {
         final snapshot = await uploadTask.whenComplete(() => {});
         final downloadUrl = await snapshot.ref.getDownloadURL();
 
-        // 3. Salvar referência no Firestore
         await _firestore.collection('documentos').add({
           'remetenteId': remetenteId,
           'destinatarioId': destinatarioId,
@@ -66,12 +72,12 @@ class DocumentosService {
           'tipo': fileType,
           'dataUpload': FieldValue.serverTimestamp(),
         });
-
       }
     } on FirebaseException catch (e) {
       debugPrint("Erro no upload do arquivo: ${e.code} - ${e.message}");
       throw Exception('Falha ao enviar o arquivo.');
     } catch (e) {
+      debugPrint("Erro inesperado: $e");
       throw Exception('Ocorreu um erro ao selecionar ou enviar o arquivo.');
     }
   }

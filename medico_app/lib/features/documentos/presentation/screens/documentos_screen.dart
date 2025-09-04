@@ -10,9 +10,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 enum TipoDocumento { todos, imagem, pdf, outro }
 
-const Color primaryColor = Color(0xFFB89453);
-const Color accentColor = Color(0xFF4A4A4A);
-
 class DocumentosScreen extends StatefulWidget {
   const DocumentosScreen({super.key});
 
@@ -35,7 +32,6 @@ class _DocumentosScreenState extends State<DocumentosScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Meus Documentos'),
-        backgroundColor: Colors.white,
         elevation: 1,
         actions: [
           _buildFilterButton(),
@@ -66,7 +62,7 @@ class _DocumentosScreenState extends State<DocumentosScreen> {
                 child: Text(
                   'Nenhum documento do tipo ${_filtroTipo.name.toUpperCase()} encontrado.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                  style: TextStyle(fontSize: 16, color: Colors.grey[400]),
                 ),
               ),
             );
@@ -105,9 +101,8 @@ class _DocumentosScreenState extends State<DocumentosScreen> {
             }
           }
         },
-        backgroundColor: primaryColor,
         tooltip: 'Adicionar novo documento',
-        child: const Icon(Icons.add, color: Colors.white),
+        child: const Icon(Icons.add),
       ),
     );
   }
@@ -117,20 +112,19 @@ class _DocumentosScreenState extends State<DocumentosScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.folder_open_rounded, size: 80, color: Colors.grey.shade400),
+          Icon(Icons.folder_open_rounded, size: 80, color: Colors.grey.shade700),
           const SizedBox(height: 16),
           const Text(
             'Nenhum documento aqui.',
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
-              color: accentColor,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Todos os seus documentos salvos aparecerão aqui.',
-            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+            style: TextStyle(fontSize: 16, color: Colors.grey[400]),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
@@ -157,14 +151,8 @@ class _DocumentosScreenState extends State<DocumentosScreen> {
                 }
               }
             },
-            icon: const Icon(Icons.upload_file_rounded, color: Colors.white),
+            icon: const Icon(Icons.upload_file_rounded),
             label: const Text('Adicionar Documento'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
           )
         ],
       ),
@@ -173,7 +161,7 @@ class _DocumentosScreenState extends State<DocumentosScreen> {
 
   Widget _buildFilterButton() {
     return PopupMenuButton<TipoDocumento>(
-      icon: const Icon(Icons.filter_list_rounded, color: accentColor),
+      icon: const Icon(Icons.filter_list_rounded),
       onSelected: (TipoDocumento result) {
         setState(() {
           _filtroTipo = result;
@@ -222,9 +210,6 @@ class _DocumentosScreenState extends State<DocumentosScreen> {
     final date = DateFormat('dd/MM/yyyy').format(doc.dataUpload);
 
     return Card(
-      elevation: 2,
-      shadowColor: Colors.black12,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       margin: const EdgeInsets.only(bottom: 16),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -243,9 +228,9 @@ class _DocumentosScreenState extends State<DocumentosScreen> {
         ),
         subtitle: Text(
           'Tipo: ${doc.tipo.toUpperCase()} - Data: $date',
-          style: TextStyle(color: Colors.grey[600]),
+          style: TextStyle(color: Colors.grey[400]),
         ),
-        trailing: const Icon(Icons.download_rounded, color: accentColor),
+        trailing: const Icon(Icons.download_rounded),
         onTap: () async {
           final uri = Uri.tryParse(doc.url);
           if (uri != null && await canLaunchUrl(uri)) {

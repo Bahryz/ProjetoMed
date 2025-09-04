@@ -19,7 +19,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  
+
   runApp(const MyApp());
 }
 
@@ -56,9 +56,9 @@ class MyApp extends StatelessWidget {
         builder: (context) {
           final router = Provider.of<GoRouter>(context);
           return MaterialApp.router(
-            title: 'Med App',
+            title: 'App Médico',
             debugShowCheckedModeBanner: false,
-            theme: AppTheme.mainTheme,
+            theme: AppTheme.darkTheme,
             routerConfig: router,
           );
         },
@@ -66,4 +66,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-

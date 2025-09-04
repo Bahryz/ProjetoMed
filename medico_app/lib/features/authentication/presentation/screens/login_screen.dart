@@ -33,30 +33,32 @@ class _LoginScreenState extends State<LoginScreen> {
       _passwordController.text,
     );
   }
-  
+
   void _showPasswordResetDialog() {
     final emailResetController = TextEditingController();
     final authController = context.read<AuthController>();
-    const primaryColor = Color(0xFFB89453);
+    final theme = Theme.of(context);
 
     showDialog(
       context: context,
       builder: (dialogContext) {
+        // O AlertDialog agora usará o tema escuro automaticamente
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Row(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
             children: [
-              Icon(Icons.lock_reset, color: primaryColor),
-              SizedBox(width: 10),
-              Text("Redefinir Senha"),
+              Icon(Icons.lock_reset, color: theme.primaryColor),
+              const SizedBox(width: 10),
+              const Text("Redefinir Senha"),
             ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
+              Text(
                 "Insira seu email e enviaremos um link para você redefinir sua senha.",
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: Colors.grey[400]),
               ),
               const SizedBox(height: 20),
               TextFormField(
@@ -75,20 +77,15 @@ class _LoginScreenState extends State<LoginScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text("Cancelar", style: TextStyle(color: Colors.grey)),
+              child: const Text("Cancelar"),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
               onPressed: () async {
                 final email = emailResetController.text.trim();
                 if (email.isNotEmpty) {
-                  final success = await authController.handlePasswordReset(email);
-                  
+                  final success =
+                      await authController.handlePasswordReset(email);
+
                   if (!dialogContext.mounted) return;
                   Navigator.of(dialogContext).pop();
                   if (!context.mounted) return;
@@ -96,21 +93,23 @@ class _LoginScreenState extends State<LoginScreen> {
                   if (success) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text("Link de redefinição enviado! Verifique seu email."),
+                        content: Text(
+                            "Link de redefinição enviado! Verifique seu email."),
                         backgroundColor: Colors.green,
                       ),
                     );
                   } else {
-                     ScaffoldMessenger.of(context).showSnackBar(
+                    ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(authController.errorMessage ?? "Não foi possível enviar o email."),
+                        content: Text(authController.errorMessage ??
+                            "Não foi possível enviar o email."),
                         backgroundColor: Colors.red,
                       ),
                     );
                   }
                 }
               },
-              child: const Text("Enviar", style: TextStyle(color: Colors.white)),
+              child: const Text("Enviar"),
             ),
           ],
         );
@@ -121,40 +120,31 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authController = context.watch<AuthController>();
-    const primaryColor = Color(0xFFB89453);
+    final theme = Theme.of(context);
 
-    const inputDecoration = InputDecoration(
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.all(Radius.circular(12.0)),
-      ),
-      contentPadding: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-    );
-
+    // O Scaffold agora não tem cor de fundo, então ele usará a cor do tema.
     return Scaffold(
-      backgroundColor: Colors.grey[50],
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.shield_moon_outlined, size: 60, color: primaryColor),
+              Icon(Icons.shield_moon_outlined,
+                  size: 60, color: theme.primaryColor),
               const SizedBox(height: 10),
-              const Text(
+              Text(
                 'Bem-vindo de Volta!',
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
               ),
-              const Text(
+              const SizedBox(height: 8),
+              Text(
                 'Acesse sua conta para continuar',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
+                style: theme.textTheme.titleMedium?.copyWith(color: Colors.grey[400]),
               ),
               const SizedBox(height: 40),
               Card(
-                elevation: 4,
-                shadowColor: Colors.black12,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
                 child: Padding(
                   padding: const EdgeInsets.all(24.0),
                   child: Form(
@@ -164,13 +154,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         TextFormField(
                           controller: _emailController,
-                          decoration: inputDecoration.copyWith(
+                          decoration: const InputDecoration(
                             labelText: 'Email',
-                            prefixIcon: const Icon(Icons.email_outlined),
+                            prefixIcon: Icon(Icons.email_outlined),
                           ),
                           keyboardType: TextInputType.emailAddress,
                           validator: (value) {
-                            if (value == null || value.isEmpty || !value.contains('@')) {
+                            if (value == null ||
+                                value.isEmpty ||
+                                !value.contains('@')) {
                               return 'Insira um email válido';
                             }
                             return null;
@@ -179,9 +171,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _passwordController,
-                          decoration: inputDecoration.copyWith(
+                          decoration: const InputDecoration(
                             labelText: 'Senha',
-                            prefixIcon: const Icon(Icons.lock_outline),
+                            prefixIcon: Icon(Icons.lock_outline),
                           ),
                           obscureText: true,
                           validator: (value) {
@@ -196,7 +188,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           alignment: Alignment.centerRight,
                           child: TextButton(
                             onPressed: _showPasswordResetDialog,
-                            child: const Text('Esqueceu a senha?', style: TextStyle(color: primaryColor)),
+                            child: const Text('Esqueceu a senha?'),
                           ),
                         ),
                         const SizedBox(height: 20),
@@ -204,21 +196,15 @@ class _LoginScreenState extends State<LoginScreen> {
                           const Center(child: CircularProgressIndicator())
                         else
                           ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: primaryColor,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
                             onPressed: _submit,
-                            child: const Text('Entrar', style: TextStyle(fontSize: 16, color: Colors.white)),
+                            child: const Text('Entrar'),
                           ),
                         if (authController.errorMessage != null) ...[
                           const SizedBox(height: 16),
                           Text(
                             authController.errorMessage!,
-                            style: const TextStyle(color: Colors.red, fontSize: 14),
+                            style: const TextStyle(
+                                color: Colors.redAccent, fontSize: 14),
                             textAlign: TextAlign.center,
                           ),
                         ],
@@ -228,7 +214,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 30),
-              const Text('Não tem uma conta? Cadastre-se como:'),
+              Text(
+                'Não tem uma conta? Cadastre-se como:',
+                style: TextStyle(color: Colors.grey[400]),
+              ),
               const SizedBox(height: 16),
               Row(
                 children: [
@@ -237,12 +226,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       icon: const Icon(Icons.person_outline),
                       label: const Text('Paciente'),
                       onPressed: () => context.go('/register-paciente'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: primaryColor,
-                        side: BorderSide(color: primaryColor.withAlpha(128)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -251,12 +234,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       icon: const Icon(Icons.medical_services_outlined),
                       label: const Text('Médico'),
                       onPressed: () => context.go('/register-medico'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: primaryColor,
-                        side: BorderSide(color: primaryColor.withAlpha(128)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
                     ),
                   ),
                 ],

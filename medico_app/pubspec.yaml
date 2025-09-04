@@ -14,7 +14,8 @@ dependencies:
   # Gerenciamento de Estado e Rotas
   go_router: ^14.1.2
   provider: ^6.1.2
-
+  google_fonts: ^4.0.4 
+  
   # Firebase
   firebase_core: ^3.0.0
   firebase_analytics: ^11.0.0
@@ -44,7 +45,7 @@ dependencies:
   
   # Mídia
   audioplayers: ^6.0.0
-  gallery_saver: ^2.3.2
+  gallery_saver: ^2.3.2 # A entrada duplicada foi removida
   record: ^5.0.5
   shared_preferences: ^2.5.3
 

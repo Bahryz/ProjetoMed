@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:medico_app/features/medico/data/models/agendamento_models.dart';
+import 'package:medico_app/features/medico/data/services/agenda_services.dart';
 
-// Paleta de cores do app
-const Color primaryColor = Color(0xFFB89453);
-const Color accentColor = Color(0xFF4A4A4A);
 
 class AreaMedicaScreen extends StatelessWidget {
   const AreaMedicaScreen({super.key});
@@ -11,23 +11,22 @@ class AreaMedicaScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
           // Cabeçalho
           const Text(
             'Painel de Controle',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: accentColor),
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Text(
             'Bem-vindo! Aqui estão suas tarefas e atalhos.',
-            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+            style: TextStyle(fontSize: 16, color: Colors.grey[400]),
           ),
           const SizedBox(height: 24),
 
-          // Card da Agenda do Dia
+          // Card da Agenda do Dia agora com dados dinâmicos
           _buildAgendaDoDiaCard(context),
           const SizedBox(height: 16),
 
@@ -72,31 +71,29 @@ class AreaMedicaScreen extends StatelessWidget {
 
   // Card para a Agenda do Dia
   Widget _buildAgendaDoDiaCard(BuildContext context) {
+    final primaryColor = Theme.of(context).primaryColor;
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
                 Icon(Icons.calendar_month_rounded, color: primaryColor),
-                SizedBox(width: 8),
-                Text('Agenda do Dia', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(width: 8),
+                const Text('Agenda do Dia', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ],
             ),
             const Divider(height: 24),
-            // MOCK DATA: Substituir por dados reais do agendamento
-            _buildAgendamentoItem('10:00', 'José Machado', 'Consulta de Rotina'),
-            _buildAgendamentoItem('11:00', 'Pedro Doutorado', 'Retorno'),
+            // Widget que constrói a lista de agendamentos de hoje
+            _buildAgendamentosDeHoje(),
             const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () => context.push('/agenda'),
-                child: const Text('Ver Agenda Completa', style: TextStyle(color: primaryColor)),
+                child: const Text('Ver Agenda Completa'),
               ),
             ),
           ],
@@ -105,18 +102,69 @@ class AreaMedicaScreen extends StatelessWidget {
     );
   }
 
+  // Novo widget com StreamBuilder para buscar dados em tempo real
+  Widget _buildAgendamentosDeHoje() {
+    final AgendaService agendaService = AgendaService();
+    final hoje = DateTime.now();
+
+    return StreamBuilder<List<Agendamento>>(
+      stream: agendaService.getAgendamentosConfirmados(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: Padding(
+            padding: EdgeInsets.all(8.0),
+            child: CircularProgressIndicator(),
+          ));
+        }
+        if (snapshot.hasError) {
+          return const Center(child: Text('Erro ao carregar agenda.'));
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(child: Text('Nenhuma consulta confirmada.'));
+        }
+
+        // Filtra a lista para pegar apenas agendamentos de hoje
+        final agendamentosDeHoje = snapshot.data!.where((ag) {
+          return ag.data.year == hoje.year &&
+                 ag.data.month == hoje.month &&
+                 ag.data.day == hoje.day;
+        }).toList();
+
+        if (agendamentosDeHoje.isEmpty) {
+          return const Center(child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 16.0),
+            child: Text('Nenhuma consulta para hoje.'),
+          ));
+        }
+
+        // Ordena os agendamentos por hora
+        agendamentosDeHoje.sort((a, b) => a.data.compareTo(b.data));
+
+        return Column(
+          children: agendamentosDeHoje.map((agendamento) {
+            return _buildAgendamentoItem(
+              DateFormat('HH:mm').format(agendamento.data),
+              agendamento.pacienteNome,
+              agendamento.motivo,
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
   Widget _buildAgendamentoItem(String horario, String nome, String motivo) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
+      padding: const EdgeInsets.only(bottom: 12.0),
       child: Row(
         children: [
-          Text(horario, style: const TextStyle(fontWeight: FontWeight.bold, color: accentColor)),
+          Text(horario, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
           const SizedBox(width: 16),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(nome, style: const TextStyle(fontSize: 15)),
-              Text(motivo, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+              Text(motivo, style: TextStyle(color: Colors.grey[400], fontSize: 13)),
             ],
           ),
         ],
@@ -142,11 +190,9 @@ class _FeatureCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

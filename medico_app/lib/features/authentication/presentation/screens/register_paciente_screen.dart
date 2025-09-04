@@ -101,18 +101,9 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
   @override
   Widget build(BuildContext context) {
     final authController = context.watch<AuthController>();
-
-    const primaryColor = Color(0xFFB89453);
-
-    const inputDecoration = InputDecoration(
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.all(Radius.circular(12.0)),
-      ),
-      contentPadding: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-    );
+    final primaryColor = Theme.of(context).primaryColor;
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -124,23 +115,18 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.person_add_alt_1_rounded, size: 60, color: primaryColor),
+              Icon(Icons.person_add_alt_1_rounded, size: 60, color: primaryColor),
               const SizedBox(height: 10),
               const Text(
                 'Crie sua Conta',
                 style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
               ),
-              const Text(
+              Text(
                 'Bem-vindo! Preencha seus dados.',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
+                style: TextStyle(fontSize: 16, color: Colors.grey[400]),
               ),
               const SizedBox(height: 30),
               Card(
-                elevation: 4,
-                shadowColor: Colors.black12,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
                 child: Padding(
                   padding: const EdgeInsets.all(24.0),
                   child: Form(
@@ -150,9 +136,9 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                       children: [
                         TextFormField(
                           controller: _nomeController,
-                          decoration: inputDecoration.copyWith(
+                          decoration: const InputDecoration(
                             labelText: 'Nome Completo',
-                            prefixIcon: const Icon(Icons.person_outline),
+                            prefixIcon: Icon(Icons.person_outline),
                           ),
                           validator: (v) =>
                               (v?.isEmpty ?? true) ? 'Campo obrigatório' : null,
@@ -160,9 +146,9 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _emailController,
-                          decoration: inputDecoration.copyWith(
+                          decoration: const InputDecoration(
                             labelText: 'Email',
-                            prefixIcon: const Icon(Icons.email_outlined),
+                            prefixIcon: Icon(Icons.email_outlined),
                           ),
                           keyboardType: TextInputType.emailAddress,
                           validator: (v) {
@@ -175,7 +161,7 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                         ),
                         const SizedBox(height: 16),
                         IntlPhoneField(
-                          decoration: inputDecoration.copyWith(
+                          decoration: const InputDecoration(
                             labelText: 'Telefone',
                             counterText: "",
                           ),
@@ -188,9 +174,9 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _cpfController,
-                          decoration: inputDecoration.copyWith(
+                          decoration: const InputDecoration(
                             labelText: 'CPF',
-                            prefixIcon: const Icon(Icons.badge_outlined),
+                            prefixIcon: Icon(Icons.badge_outlined),
                           ),
                           keyboardType: TextInputType.number,
                           inputFormatters: [_cpfFormatter],
@@ -206,7 +192,7 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                         TextFormField(
                           controller: _passwordController,
                           obscureText: _isPasswordObscured,
-                          decoration: inputDecoration.copyWith(
+                          decoration: InputDecoration(
                             labelText: 'Senha',
                             prefixIcon: const Icon(Icons.lock_outline),
                             suffixIcon: IconButton(
@@ -237,7 +223,7 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                             children: [
                               LinearProgressIndicator(
                                 value: _passwordStrength,
-                                backgroundColor: Colors.grey[300],
+                                backgroundColor: Colors.grey[800],
                                 minHeight: 6,
                                 valueColor: AlwaysStoppedAnimation<Color>(
                                     _getStrengthColor(_passwordStrength)),
@@ -256,7 +242,7 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                         TextFormField(
                           controller: _confirmPasswordController,
                           obscureText: _isConfirmPasswordObscured,
-                          decoration: inputDecoration.copyWith(
+                          decoration: InputDecoration(
                             labelText: 'Confirmar Senha',
                             prefixIcon: const Icon(Icons.lock_outline),
                             suffixIcon: IconButton(
@@ -283,20 +269,8 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                         authController.isLoading
                             ? const Center(child: CircularProgressIndicator())
                             : ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: primaryColor,
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 16),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
                                 onPressed: _submit,
-                                child: const Text(
-                                  'Cadastrar',
-                                  style: TextStyle(
-                                      fontSize: 16, color: Colors.white),
-                                ),
+                                child: const Text('Cadastrar'),
                               ),
                       ],
                     ),
@@ -306,14 +280,6 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
               const SizedBox(height: 24),
               TextButton(
                 onPressed: () => context.go('/login'),
-                style: TextButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: primaryColor.withAlpha(77)),
-                  ),
-                ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -324,7 +290,6 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                       'Voltar para o Login',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: primaryColor,
                         fontSize: 16,
                       ),
                     ),
@@ -335,7 +300,7 @@ class _RegisterPacienteScreenState extends State<RegisterPacienteScreen> {
                 const SizedBox(height: 8),
                 Text(
                   authController.errorMessage!,
-                  style: const TextStyle(color: Colors.red, fontSize: 14),
+                  style: const TextStyle(color: Colors.redAccent, fontSize: 14),
                   textAlign: TextAlign.center,
                 ),
               ],
