@@ -7,10 +7,10 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:medico_app/features/authentication/presentation/screens/image_viewer_screen.dart';
 import 'package:medico_app/features/chat/services/chat_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:medico_app/features/authentication/presentation/screens/image_viewer_screen.dart';
 
 class DetalhesChatScreen extends StatefulWidget {
   final String conversaId;
@@ -305,7 +305,8 @@ class _DetalhesChatScreenState extends State<DetalhesChatScreen> {
           ),
         );
         break;
-      case 'arquivo':
+      case 'pdf': // Adicionamos a lógica para PDF aqui
+      case 'outro': // E para outros arquivos também
         conteudoWidget = InkWell(
           onTap: () async {
             final uri = Uri.tryParse(conteudo);

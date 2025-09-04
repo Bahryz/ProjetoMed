@@ -4,12 +4,14 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:medico_app/features/authentication/data/models/app_user.dart';
 import 'package:medico_app/features/authentication/presentation/controllers/auth_controller.dart';
-import 'package:medico_app/features/authentication/presentation/screens/image_viewer_screen.dart';
 import 'package:medico_app/features/documentos/data/models/documento.dart';
 import 'package:medico_app/features/documentos/services/documentos_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 enum TipoDocumento { todos, imagem, pdf, outro }
+
+const Color primaryColor = Color(0xFFB89453);
+const Color accentColor = Color(0xFF4A4A4A);
 
 class DocumentosScreen extends StatefulWidget {
   const DocumentosScreen({super.key});
@@ -33,6 +35,8 @@ class _DocumentosScreenState extends State<DocumentosScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Meus Documentos'),
+        backgroundColor: Colors.white,
+        elevation: 1,
         actions: [
           _buildFilterButton(),
         ],
@@ -47,7 +51,7 @@ class _DocumentosScreenState extends State<DocumentosScreen> {
             return Center(child: Text('Erro ao carregar documentos: ${snapshot.error}'));
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('Nenhum documento encontrado.'));
+            return _buildEmptyState();
           }
 
           final documentos = snapshot.data!.where((doc) {
@@ -56,24 +60,120 @@ class _DocumentosScreenState extends State<DocumentosScreen> {
           }).toList();
 
           if (documentos.isEmpty) {
-            return const Center(child: Text('Nenhum documento encontrado com este filtro.'));
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Text(
+                  'Nenhum documento do tipo ${_filtroTipo.name.toUpperCase()} encontrado.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                ),
+              ),
+            );
           }
 
           return ListView.builder(
+            padding: const EdgeInsets.all(16),
             itemCount: documentos.length,
             itemBuilder: (context, index) {
               final doc = documentos[index];
-              return _buildDocumentoTile(doc);
+              return _buildDocumentoCard(doc);
             },
           );
         },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final currentUser = context.read<AuthController>().user;
+          if (currentUser != null) {
+            try {
+              await DocumentosService().uploadDocumento(
+                remetenteId: currentUser.uid,
+                destinatarioId: currentUser.uid,
+              );
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Documento enviado com sucesso!')),
+                );
+              }
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(e.toString())),
+                );
+              }
+            }
+          }
+        },
+        backgroundColor: primaryColor,
+        tooltip: 'Adicionar novo documento',
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
+    );
+  }
+  
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.folder_open_rounded, size: 80, color: Colors.grey.shade400),
+          const SizedBox(height: 16),
+          const Text(
+            'Nenhum documento aqui.',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: accentColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Todos os seus documentos salvos aparecerão aqui.',
+            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () async {
+              final currentUser = context.read<AuthController>().user;
+              if (currentUser != null) {
+                try {
+                  await DocumentosService().uploadDocumento(
+                    remetenteId: currentUser.uid,
+                    destinatarioId: currentUser.uid,
+                  );
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Documento enviado com sucesso!')),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(e.toString())),
+                    );
+                  }
+                }
+              }
+            },
+            icon: const Icon(Icons.upload_file_rounded, color: Colors.white),
+            label: const Text('Adicionar Documento'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          )
+        ],
       ),
     );
   }
 
   Widget _buildFilterButton() {
     return PopupMenuButton<TipoDocumento>(
-      icon: const Icon(Icons.filter_list),
+      icon: const Icon(Icons.filter_list_rounded, color: accentColor),
       onSelected: (TipoDocumento result) {
         setState(() {
           _filtroTipo = result;
@@ -100,19 +200,53 @@ class _DocumentosScreenState extends State<DocumentosScreen> {
     );
   }
 
-  Widget _buildDocumentoTile(Documento doc) {
-    final icon = doc.tipo == 'imagem' ? Icons.image : Icons.insert_drive_file;
+  Widget _buildDocumentoCard(Documento doc) {
+    IconData icon;
+    Color color;
+
+    switch (doc.tipo) {
+      case 'imagem':
+        icon = Icons.image_rounded;
+        color = Colors.blueAccent;
+        break;
+      case 'pdf':
+        icon = Icons.picture_as_pdf_rounded;
+        color = Colors.redAccent;
+        break;
+      default:
+        icon = Icons.insert_drive_file_rounded;
+        color = Colors.grey;
+        break;
+    }
+
     final date = DateFormat('dd/MM/yyyy').format(doc.dataUpload);
 
-    return ListTile(
-      leading: Icon(icon),
-      title: Text(doc.nomeArquivo),
-      subtitle: Text('Tipo: ${doc.tipo.toUpperCase()} - Data: $date'),
-      onTap: () async {
-        if (doc.tipo == 'imagem') {
-          // Reutilize sua tela de visualização de imagem
-          context.push('/image-viewer', extra: doc.url);
-        } else {
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.black12,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      margin: const EdgeInsets.only(bottom: 16),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 30, color: color),
+        ),
+        title: Text(
+          doc.nomeArquivo,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text(
+          'Tipo: ${doc.tipo.toUpperCase()} - Data: $date',
+          style: TextStyle(color: Colors.grey[600]),
+        ),
+        trailing: const Icon(Icons.download_rounded, color: accentColor),
+        onTap: () async {
           final uri = Uri.tryParse(doc.url);
           if (uri != null && await canLaunchUrl(uri)) {
             await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -122,8 +256,8 @@ class _DocumentosScreenState extends State<DocumentosScreen> {
               const SnackBar(content: Text('Não foi possível abrir o arquivo.')),
             );
           }
-        }
-      },
+        },
+      ),
     );
   }
 }
