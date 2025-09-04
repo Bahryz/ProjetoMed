@@ -11,10 +11,18 @@ import 'package:medico_app/features/chat/presentation/screens/detalhes_chat_scre
 import 'package:medico_app/features/chat/presentation/screens/home_screen.dart';
 import 'package:medico_app/features/chat/presentation/screens/lista_conversas_screen.dart';
 import 'package:medico_app/features/chat/presentation/screens/lista_usuarios_screen.dart';
-import 'package:medico_app/features/settings/presentation/screens/settings_screen.dart';
 import 'package:medico_app/features/documentos/presentation/screens/documentos_screen.dart';
 import 'package:medico_app/features/authentication/presentation/screens/image_viewer_screen.dart';
+import 'package:medico_app/features/paciente/presentation/screens/meus_agentamentos.dart';
+import 'package:medico_app/features/paciente/presentation/screens/solicitar_agentamento_screen.dart';
+import 'package:medico_app/features/settings/presentation/screens/settings_screen.dart';
+import 'package:medico_app/medico/presentation/screens/agenda_screen.dart';
+import 'package:medico_app/medico/presentation/screens/conteudo_educativo.dart';
+import 'package:medico_app/medico/presentation/screens/feedbacks_screen.dart';
 import 'package:provider/provider.dart';
+
+
+
 
 class AppRouter {
   final AuthController authController;
@@ -71,6 +79,28 @@ class AppRouter {
       GoRoute(
           path: '/configuracoes',
           builder: (context, state) => const SettingsScreen()),
+      
+      // ROTAS DA ÁREA MÉDICA
+      GoRoute(
+          path: '/agenda',
+          builder: (context, state) => const AgendaScreen()),
+      GoRoute(
+          path: '/conteudo-educativo',
+          builder: (context, state) => const ConteudoEducativoScreen()),
+      GoRoute(
+          path: '/feedbacks',
+          builder: (context, state) => const FeedbacksScreen()),
+
+      // ROTAS DA ÁREA DO PACIENTE
+      GoRoute(
+        path: '/solicitar-agendamento',
+        builder: (context, state) => const SolicitarAgendamentoScreen(),
+      ),
+      GoRoute(
+        path: '/meus-agendamentos',
+        builder: (context, state) => const MeusAgendamentosScreen(),
+      ),
+
       GoRoute(
         path: '/chat',
         builder: (context, state) {
