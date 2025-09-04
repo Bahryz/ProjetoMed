@@ -1,11 +1,9 @@
-// bahryz/projetomed/ProjetoMed-73b813af7a48b4b61e907a610ff91605cc078b5d/medico_app/lib/features/chat/presentation/screens/home_screen.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:medico_app/features/admin/presentation/admin_approval_screen.dart';
 import 'package:medico_app/features/authentication/data/models/app_user.dart';
-import 'package:medico_app/medico/presentation/screens/area_medica_screen.dart';
+import 'package:medico_app/features/authentication/presentation/controllers/auth_controller.dart';
+import 'package:medico_app/features/medico/presentation/screens/area_medica_screen.dart';
 import 'package:medico_app/features/chat/presentation/screens/lista_conversas_screen.dart';
 import 'package:medico_app/features/chat/services/chat_service.dart';
 import 'package:medico_app/features/documentos/presentation/screens/documentos_screen.dart';
@@ -192,19 +190,29 @@ class _AppDrawer extends StatelessWidget {
             leading: const Icon(Icons.account_circle),
             title: const Text('Meu Perfil'),
             onTap: () {
-              // TODO: Navegar para a tela de perfil
+              // Fecha o drawer antes de navegar para uma melhor UX
+              Navigator.of(context).pop();
+              // Navega para a nova tela de perfil
+              context.push('/profile');
             },
           ),
           ListTile(
             leading: const Icon(Icons.settings),
             title: const Text('Configurações'),
-            onTap: () => context.push('/configuracoes'),
+            onTap: () {
+               // Fecha o drawer antes de navegar
+              Navigator.of(context).pop();
+              context.push('/configuracoes');
+            },
           ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Sair'),
             onTap: () async {
+              // Fecha o drawer
+              Navigator.of(context).pop();
+              // Executa o logout
               await context.read<AuthController>().handleLogout();
             },
           ),

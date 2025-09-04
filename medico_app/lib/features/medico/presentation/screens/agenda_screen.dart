@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:medico_app/medico/data/models/agendamento_models.dart';
-import 'package:medico_app/medico/data/services/agenda_services.dart';
+import 'package:medico_app/features/medico/data/models/agendamento_models.dart';
+import 'package:medico_app/features/medico/data/services/agenda_services.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 const Color primaryColor = Color(0xFFB89453);

@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 // Corrigindo o caminho do import para o local correto do modelo
-import 'package:medico_app/medico/data/models/agendamento_models.dart'; 
+import 'package:medico_app/features/medico/data/models/agendamento_models.dart'; 
 
 class AgendaService {
   final CollectionReference _agendamentosCollection =

@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/date_symbol_data_local.dart'; // 1. ADICIONE ESTE IMPORT
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
 import 'package:medico_app/app/config/router/app_router.dart';
+import 'package:medico_app/app/config/theme/app_theme.dart';
 import 'package:medico_app/features/authentication/data/models/app_user.dart';
 import 'package:medico_app/features/authentication/data/repositories/auth_repository.dart';
 import 'package:medico_app/features/authentication/presentation/controllers/auth_controller.dart';
 import 'package:medico_app/features/chat/services/user_service.dart';
 import 'firebase_options.dart';
 
-void main() async { // 2. TRANSFORME A FUNÇÃO EM ASYNC
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // 3. ADICIONE A INICIALIZAÇÃO DA LOCALIZAÇÃO PARA 'pt_BR'
   await initializeDateFormatting('pt_BR', null);
 
   await Firebase.initializeApp(
@@ -57,8 +56,9 @@ class MyApp extends StatelessWidget {
         builder: (context) {
           final router = Provider.of<GoRouter>(context);
           return MaterialApp.router(
-            title: 'App Médico',
+            title: 'Med App',
             debugShowCheckedModeBanner: false,
+            theme: AppTheme.mainTheme,
             routerConfig: router,
           );
         },
@@ -66,3 +66,4 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+

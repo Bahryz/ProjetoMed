@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:medico_app/features/authentication/presentation/controllers/auth_controller.dart';
-import 'package:medico_app/medico/data/models/agendamento_models.dart';
-import 'package:medico_app/medico/data/services/agenda_services.dart';
+import 'package:medico_app/features/medico/data/models/agendamento_models.dart';
+import 'package:medico_app/features/medico/data/services/agenda_services.dart';
 import 'package:provider/provider.dart';
 
 const Color primaryColor = Color(0xFFB89453);

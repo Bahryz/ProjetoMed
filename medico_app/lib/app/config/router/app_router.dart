@@ -13,16 +13,14 @@ import 'package:medico_app/features/chat/presentation/screens/lista_conversas_sc
 import 'package:medico_app/features/chat/presentation/screens/lista_usuarios_screen.dart';
 import 'package:medico_app/features/documentos/presentation/screens/documentos_screen.dart';
 import 'package:medico_app/features/authentication/presentation/screens/image_viewer_screen.dart';
+import 'package:medico_app/features/medico/presentation/screens/agenda_screen.dart';
+import 'package:medico_app/features/medico/presentation/screens/conteudo_educativo.dart';
+import 'package:medico_app/features/medico/presentation/screens/feedbacks_screen.dart';
 import 'package:medico_app/features/paciente/presentation/screens/meus_agentamentos.dart';
 import 'package:medico_app/features/paciente/presentation/screens/solicitar_agentamento_screen.dart';
+import 'package:medico_app/features/profile/presentation/screens/profile_screen.dart';
 import 'package:medico_app/features/settings/presentation/screens/settings_screen.dart';
-import 'package:medico_app/medico/presentation/screens/agenda_screen.dart';
-import 'package:medico_app/medico/presentation/screens/conteudo_educativo.dart';
-import 'package:medico_app/medico/presentation/screens/feedbacks_screen.dart';
 import 'package:provider/provider.dart';
-
-
-
 
 class AppRouter {
   final AuthController authController;
@@ -80,6 +78,11 @@ class AppRouter {
           path: '/configuracoes',
           builder: (context, state) => const SettingsScreen()),
       
+      // ROTA DE PERFIL
+      GoRoute(
+          path: '/profile',
+          builder: (context, state) => const ProfileScreen()),
+
       // ROTAS DA ÁREA MÉDICA
       GoRoute(
           path: '/agenda',
