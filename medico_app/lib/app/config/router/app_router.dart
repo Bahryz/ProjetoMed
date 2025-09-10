@@ -15,6 +15,7 @@ import 'package:medico_app/features/chat/presentation/screens/lista_conversas_sc
 import 'package:medico_app/features/chat/presentation/screens/lista_usuarios_screen.dart';
 import 'package:medico_app/features/documentos/presentation/screens/documentos_screen.dart';
 import 'package:medico_app/features/authentication/presentation/screens/image_viewer_screen.dart';
+import 'package:medico_app/features/medico/presentation/screens/add_conteudo_educativo_screen.dart';
 import 'package:medico_app/features/medico/presentation/screens/agenda_screen.dart';
 import 'package:medico_app/features/medico/presentation/screens/conteudo_educativo.dart';
 import 'package:medico_app/features/medico/presentation/screens/feedbacks_screen.dart';
@@ -96,6 +97,12 @@ class AppRouter {
       GoRoute(
           path: '/feedbacks',
           builder: (context, state) => const FeedbacksScreen()),
+
+      // ROTA PARA ADICIONAR CONTEÚDO
+      GoRoute(
+        path: '/add-conteudo-educativo',
+        builder: (context, state) => const AddConteudoEducativoScreen(),
+      ),
 
       // ROTAS DA ÁREA DO PACIENTE
       GoRoute(

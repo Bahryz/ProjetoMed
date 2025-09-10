@@ -159,7 +159,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                   children: [
                     if (_selectedDay != null)
                       ...getEventosDoDia(_selectedDay!).map((ag) => ListTile(
-                            leading: Icon(Icons.event_available, color: primaryColor),
+                            leading: const Icon(Icons.event_available, color: primaryColor),
                             title: Text(ag.pacienteNome),
                             subtitle: Text("${DateFormat('HH:mm').format(ag.data)} - ${ag.motivo}"),
                           )),

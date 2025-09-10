@@ -24,14 +24,14 @@
     <string>$(FLUTTER_BUILD_NUMBER)</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
-    
+
     <key>NSPhotoLibraryUsageDescription</key>
     <string>Precisamos de acesso à sua galeria para que você possa enviar imagens no chat.</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>Precisamos de permissão para salvar imagens do aplicativo na sua galeria.</string>
     <key>NSCameraUsageDescription</key>
     <string>Precisamos de acesso à sua câmera para que você possa tirar fotos e enviar no chat.</string>
-    <key>UIDocumentPickerViewController</key>
-    <string>Permitir que o usuário escolha documentos para enviar.</string>
-    
+
     <key>UILaunchStoryboardName</key>
     <string>LaunchScreen</string>
     <key>UIMainStoryboardFile</key>
