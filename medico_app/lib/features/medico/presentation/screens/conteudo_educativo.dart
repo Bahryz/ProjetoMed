@@ -177,7 +177,7 @@ class _ConteudoEducativoScreenState extends State<ConteudoEducativoScreen> {
                       ) ?? false;
 
                     if (confirm) {
-                      await _service.deleteConteudo(conteudo.id, conteudo.url);
+                      await _service.deleteConteudo(conteudo);
                     }
                 },
               )

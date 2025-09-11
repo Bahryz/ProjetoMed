@@ -6,15 +6,15 @@ import 'package:medico_app/features/medico/data/models/conteudo_educativo_model.
 import 'package:medico_app/features/medico/data/services/conteudo_educativo_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class ConteudoEducativoScreen extends StatefulWidget {
-  const ConteudoEducativoScreen({super.key});
+class AddConteudoEducativoScreen extends StatefulWidget {
+  const AddConteudoEducativoScreen({super.key});
 
   @override
-  State<ConteudoEducativoScreen> createState() =>
-      _ConteudoEducativoScreenState();
+  State<AddConteudoEducativoScreen> createState() =>
+      _AddConteudoEducativoScreenState();
 }
 
-class _ConteudoEducativoScreenState extends State<ConteudoEducativoScreen> {
+class _AddConteudoEducativoScreenState extends State<AddConteudoEducativoScreen> {
   final ConteudoEducativoService _service = ConteudoEducativoService();
   ConteudoTipo? _filtroSelecionado;
   List<ConteudoEducativo> _conteudos = [];

@@ -17,7 +17,7 @@ import 'package:medico_app/features/documentos/presentation/screens/documentos_s
 import 'package:medico_app/features/authentication/presentation/screens/image_viewer_screen.dart';
 import 'package:medico_app/features/medico/presentation/screens/add_conteudo_educativo_screen.dart';
 import 'package:medico_app/features/medico/presentation/screens/agenda_screen.dart';
-import 'package:medico_app/features/medico/presentation/screens/conteudo_educativo.dart';
+import 'package:medico_app/features/medico/presentation/screens/conteudo_educativo.dart' as conteudo;
 import 'package:medico_app/features/medico/presentation/screens/feedbacks_screen.dart';
 import 'package:medico_app/features/paciente/presentation/screens/meus_agentamentos.dart';
 import 'package:medico_app/features/paciente/presentation/screens/solicitar_agentamento_screen.dart';
@@ -93,7 +93,7 @@ class AppRouter {
           builder: (context, state) => const AgendaScreen()),
       GoRoute(
           path: '/conteudo-educativo',
-          builder: (context, state) => const ConteudoEducativoScreen()),
+          builder: (context, state) => const conteudo.ConteudoEducativoScreen()),
       GoRoute(
           path: '/feedbacks',
           builder: (context, state) => const FeedbacksScreen()),
