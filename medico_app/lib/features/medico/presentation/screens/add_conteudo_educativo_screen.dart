@@ -27,7 +27,7 @@ class _AddConteudoEducativoScreenState extends State<AddConteudoEducativoScreen>
         actions: [
           IconButton(
             icon: const Icon(Icons.add_circle_outline),
-            onPressed: () => context.push('/add-conteudo-educativo'),
+            onPressed: () => context.push('/create-conteudo-educativo'),
             tooltip: 'Adicionar Novo Conteúdo',
           ),
         ],

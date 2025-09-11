@@ -15,15 +15,18 @@ import 'package:medico_app/features/chat/presentation/screens/lista_conversas_sc
 import 'package:medico_app/features/chat/presentation/screens/lista_usuarios_screen.dart';
 import 'package:medico_app/features/documentos/presentation/screens/documentos_screen.dart';
 import 'package:medico_app/features/authentication/presentation/screens/image_viewer_screen.dart';
-import 'package:medico_app/features/medico/presentation/screens/add_conteudo_educativo_screen.dart';
+import 'package:medico_app/features/medico/presentation/screens/add_conteudo_educativo_screen.dart'; // A tela de listagem
+import 'package:medico_app/features/medico/presentation/screens/create_conteudo_educativo_screen.dart'; // A nova tela de criação
 import 'package:medico_app/features/medico/presentation/screens/agenda_screen.dart';
 import 'package:medico_app/features/medico/presentation/screens/conteudo_educativo.dart' as conteudo;
 import 'package:medico_app/features/medico/presentation/screens/feedbacks_screen.dart';
 import 'package:medico_app/features/paciente/presentation/screens/meus_agentamentos.dart';
 import 'package:medico_app/features/paciente/presentation/screens/solicitar_agentamento_screen.dart';
-import 'package:medico_app/features/profile/presentation/screens/profile_screen.dart'; // Importe a nova tela
+import 'package:medico_app/features/profile/presentation/screens/profile_screen.dart';
 import 'package:medico_app/features/settings/presentation/screens/settings_screen.dart';
 import 'package:provider/provider.dart';
+import 'package:medico_app/features/paciente/presentation/screens/paciente_conteudo_educativo_screen.dart';
+
 
 class AppRouter {
   final AuthController authController;
@@ -95,14 +98,16 @@ class AppRouter {
           path: '/conteudo-educativo',
           builder: (context, state) => const conteudo.ConteudoEducativoScreen()),
       GoRoute(
-          path: '/feedbacks',
-          builder: (context, state) => const FeedbacksScreen()),
-
-      // ROTA PARA ADICIONAR CONTEÚDO
-      GoRoute(
         path: '/add-conteudo-educativo',
         builder: (context, state) => const AddConteudoEducativoScreen(),
       ),
+      GoRoute(
+        path: '/create-conteudo-educativo',
+        builder: (context, state) => const CreateConteudoEducativoScreen(),
+      ),
+      GoRoute(
+          path: '/feedbacks',
+          builder: (context, state) => const FeedbacksScreen()),
 
       // ROTAS DA ÁREA DO PACIENTE
       GoRoute(
@@ -112,6 +117,10 @@ class AppRouter {
       GoRoute(
         path: '/meus-agendamentos',
         builder: (context, state) => const MeusAgendamentosScreen(),
+      ),
+      GoRoute(
+        path: '/paciente-conteudo-educativo',
+        builder: (context, state) => const PacienteConteudoEducativoScreen(),
       ),
 
       GoRoute(

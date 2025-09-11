@@ -33,7 +33,7 @@ class AreaPacienteScreen extends StatelessWidget {
             subtitle: 'Artigos e vídeos para cuidar de você.',
             icon: Icons.school_rounded,
             color: Colors.orange,
-            onTap: () { /* TODO: Navegar para tela de educação */ },
+            onTap: () => context.push('/paciente-conteudo-educativo'),
           ),
         ],
       ),
