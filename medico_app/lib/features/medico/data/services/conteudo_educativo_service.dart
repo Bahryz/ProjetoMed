@@ -1,19 +1,21 @@
-import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:medico_app/features/medico/data/models/conteudo_educativo_model.dart';
+import 'package:uuid/uuid.dart';
 
 class ConteudoEducativoService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
+  final _uuid = const Uuid();
 
-  /// Retorna um stream com a lista de todos os conteúdos educativos, ordenados pela propriedade 'ordem'.
+  /// Busca todos os conteúdos educativos, ordenados por data de publicação.
   Stream<List<ConteudoEducativo>> getConteudos() {
     return _firestore
-        .collection('conteudo_educativo')
-        .orderBy('ordem')
+        .collection('conteudos_educativos')
+        .orderBy('dataPublicacao', descending: true)
         .snapshots()
         .map((snapshot) {
       return snapshot.docs
@@ -22,77 +24,47 @@ class ConteudoEducativoService {
     });
   }
 
-  /// Adiciona um novo documento de conteúdo educativo no Firestore.
+  /// Faz o upload de um arquivo para o Firebase Storage.
+  /// Retorna a URL de download do arquivo.
+  Future<String> uploadFile({
+    required Uint8List fileBytes,
+    required String fileName,
+    required String medicoId,
+  }) async {
+    try {
+      final fileId = _uuid.v4();
+      final ref = _storage.ref('conteudos_educativos/$medicoId/$fileId-$fileName');
+      final uploadTask = ref.putData(fileBytes);
+      final snapshot = await uploadTask.whenComplete(() {});
+      return await snapshot.ref.getDownloadURL();
+    } catch (e) {
+      debugPrint('Erro no upload do arquivo: $e');
+      rethrow;
+    }
+  }
+
+  /// Adiciona um novo documento de conteúdo na coleção do Firestore.
   Future<void> addConteudo({
     required String titulo,
     required String descricao,
-    required ConteudoTipo tipo,
+    required List<String> tags,
     required String url,
+    required String medicoId,
     String? thumbnailUrl,
   }) async {
-    try {
-      // Pega a contagem atual de documentos para definir a ordem do novo item.
-      final count = await _firestore.collection('conteudo_educativo').count().get();
-      await _firestore.collection('conteudo_educativo').add({
-        'titulo': titulo,
-        'descricao': descricao,
-        'tipo': tipo.name,
-        'url': url,
-        'thumbnailUrl': thumbnailUrl,
-        'dataPublicacao': FieldValue.serverTimestamp(),
-        'ordem': count.count,
-      });
-    } catch (e) {
-      debugPrint("Erro ao adicionar conteúdo: $e");
-      throw Exception("Não foi possível adicionar o conteúdo.");
-    }
+    await _firestore.collection('conteudos_educativos').add({
+      'titulo': titulo,
+      'descricao': descricao,
+      'tags': tags,
+      'url': url,
+      'thumbnailUrl': thumbnailUrl,
+      'criadoPor': medicoId,
+      'dataPublicacao': FieldValue.serverTimestamp(),
+    });
   }
 
-  /// Deleta um conteúdo (documento do Firestore e arquivos associados no Storage).
-  Future<void> deleteConteudo(ConteudoEducativo conteudo) async {
-    try {
-      await _firestore.collection('conteudo_educativo').doc(conteudo.id).delete();
-      // Deleta o arquivo principal.
-      if (conteudo.url.isNotEmpty && conteudo.url.contains('firebasestorage.googleapis.com')) {
-          await _storage.refFromURL(conteudo.url).delete();
-      }
-      // Deleta a miniatura, se existir.
-      if (conteudo.thumbnailUrl != null && conteudo.thumbnailUrl!.isNotEmpty && conteudo.thumbnailUrl!.contains('firebasestorage.googleapis.com')) {
-         await _storage.refFromURL(conteudo.thumbnailUrl!).delete();
-      }
-    } on FirebaseException catch (e) {
-      // Ignora o erro "object-not-found" caso o ficheiro já tenha sido apagado manualmente
-      if (e.code != 'object-not-found') {
-        debugPrint("Erro ao deletar conteúdo: ${e.message}");
-        throw Exception("Falha ao deletar o material.");
-      }
-    }
-  }
-
-  /// Atualiza a ordem dos conteúdos no Firestore usando uma transação em lote (batch).
-  Future<void> updateOrdem(List<ConteudoEducativo> conteudos) async {
-    final batch = _firestore.batch();
-    for (int i = 0; i < conteudos.length; i++) {
-      final docRef = _firestore.collection('conteudo_educativo').doc(conteudos[i].id);
-      batch.update(docRef, {'ordem': i});
-    }
-    await batch.commit();
-  }
-
-  /// Faz o upload de um arquivo (bytes ou caminho do ficheiro) para o Firebase Storage.
-  Future<String> uploadFile(PlatformFile file, String path) async {
-    try {
-      final ref = _storage.ref().child(path);
-      final uploadTask = (kIsWeb && file.bytes != null)
-          ? ref.putData(file.bytes!)
-          : ref.putFile(File(file.path!));
-
-      final snapshot = await uploadTask.whenComplete(() => {});
-      return await snapshot.ref.getDownloadURL();
-    } on FirebaseException catch (e) {
-      debugPrint("Erro no upload do ficheiro: ${e.message}");
-      throw Exception("Falha ao enviar o ficheiro.");
-    }
+  Future<void> deleteConteudo(String conteudoId) async {
+    await _firestore.collection('conteudos_educativos').doc(conteudoId).delete();
   }
 }
 

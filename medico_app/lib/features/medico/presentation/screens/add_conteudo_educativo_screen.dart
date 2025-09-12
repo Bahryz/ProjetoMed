@@ -1,10 +1,12 @@
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
-import 'package:medico_app/features/medico/data/models/conteudo_educativo_model.dart';
+import 'package:medico_app/features/authentication/presentation/controllers/auth_controller.dart';
 import 'package:medico_app/features/medico/data/services/conteudo_educativo_service.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:metadata_fetch/metadata_fetch.dart';
+import 'package:provider/provider.dart';
+
+enum InputType { url, file }
 
 class AddConteudoEducativoScreen extends StatefulWidget {
   const AddConteudoEducativoScreen({super.key});
@@ -14,242 +16,373 @@ class AddConteudoEducativoScreen extends StatefulWidget {
       _AddConteudoEducativoScreenState();
 }
 
-class _AddConteudoEducativoScreenState extends State<AddConteudoEducativoScreen> {
-  final ConteudoEducativoService _service = ConteudoEducativoService();
-  ConteudoTipo? _filtroSelecionado;
-  List<ConteudoEducativo> _conteudos = [];
+class _AddConteudoEducativoScreenState
+    extends State<AddConteudoEducativoScreen> {
+  // Controllers
+  final _formKey = GlobalKey<FormState>();
+  final _tituloController = TextEditingController();
+  final _descricaoController = TextEditingController();
+  final _urlController = TextEditingController();
+  final _tagController = TextEditingController();
+  final _urlFocusNode = FocusNode();
+
+  // State
+  InputType _inputType = InputType.url;
+  bool _isLoading = false;
+  bool _isFetchingPreview = false;
+  Metadata? _urlMetadata;
+  PlatformFile? _pickedFile;
+  PlatformFile? _pickedThumbnail;
+
+  // Tags
+  final List<String> _tags = [];
+  final List<String> _tagsSugeridas = ['Artigo', 'Vídeo', 'PDF', 'Exercícios'];
+
+  final _service = ConteudoEducativoService();
+
+  @override
+  void initState() {
+    super.initState();
+    _urlFocusNode.addListener(_onUrlFocusChange);
+  }
+
+  @override
+  void dispose() {
+    _tituloController.dispose();
+    _descricaoController.dispose();
+    _urlController.dispose();
+    _tagController.dispose();
+    _urlFocusNode.removeListener(_onUrlFocusChange);
+    _urlFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _onUrlFocusChange() {
+    if (!_urlFocusNode.hasFocus) {
+      _fetchUrlPreview();
+    }
+  }
+
+  Future<void> _fetchUrlPreview() async {
+    final url = _urlController.text.trim();
+    if (url.isNotEmpty && Uri.tryParse(url)?.isAbsolute == true) {
+      setState(() {
+        _isFetchingPreview = true;
+        _urlMetadata = null;
+      });
+      try {
+        final data = await MetadataFetch.extract(url);
+        if (mounted) {
+          setState(() {
+            _urlMetadata = data;
+            final title = data?.title;
+            final description = data?.description;
+            if (title != null) {
+              _tituloController.text = title;
+            }
+            if (description != null) {
+              _descricaoController.text = description;
+            }
+          });
+        }
+      } catch (e) {
+        debugPrint('Erro ao buscar preview da URL: $e');
+      } finally {
+        if (mounted) {
+          setState(() => _isFetchingPreview = false);
+        }
+      }
+    }
+  }
+
+  Future<void> _pickFile(bool isThumbnail) async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: isThumbnail ? FileType.image : FileType.any,
+      withData: true,
+    );
+
+    if (result != null) {
+      setState(() {
+        if (isThumbnail) {
+          _pickedThumbnail = result.files.single;
+        } else {
+          _pickedFile = result.files.single;
+          _tituloController.text = _pickedFile!.name;
+        }
+      });
+    }
+  }
+
+  void _addTag(String tag) {
+    if (tag.isNotEmpty && !_tags.contains(tag)) {
+      setState(() {
+        _tags.add(tag);
+        _tagController.clear();
+      });
+    }
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate() || _tags.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text(
+                  'Preencha todos os campos e adicione pelo menos uma tag.')),
+        );
+      }
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    final medicoId = context.read<AuthController>().user?.uid;
+    if (medicoId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Erro de autenticação.')));
+      }
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    try {
+      String finalUrl = '';
+      String? thumbnailUrl;
+
+      // Upload de thumbnail se houver
+      if (_pickedThumbnail != null) {
+        thumbnailUrl = await _service.uploadFile(
+          fileBytes: _pickedThumbnail!.bytes!,
+          fileName: _pickedThumbnail!.name,
+          medicoId: medicoId,
+        );
+      } else {
+        thumbnailUrl = _urlMetadata?.image;
+      }
+
+      // Lógica de URL vs. Upload de Arquivo
+      if (_inputType == InputType.url) {
+        finalUrl = _urlController.text.trim();
+      } else if (_pickedFile != null) {
+        finalUrl = await _service.uploadFile(
+          fileBytes: _pickedFile!.bytes!,
+          fileName: _pickedFile!.name,
+          medicoId: medicoId,
+        );
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Por favor, selecione um arquivo.')));
+        }
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      await _service.addConteudo(
+        titulo: _tituloController.text.trim(),
+        descricao: _descricaoController.text.trim(),
+        tags: _tags,
+        url: finalUrl,
+        thumbnailUrl: thumbnailUrl,
+        medicoId: medicoId,
+      );
+
+      if (mounted) {
+        context.pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Erro: $e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Conteúdo Educativo'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline),
-            onPressed: () => context.push('/create-conteudo-educativo'),
-            tooltip: 'Adicionar Novo Conteúdo',
-          ),
-        ],
+        title: const Text('Novo Conteúdo'),
+        centerTitle: true,
       ),
-      body: Column(
-        children: [
-          _buildFilterChips(),
-          Expanded(
-            child: StreamBuilder<List<ConteudoEducativo>>(
-              stream: _service.getConteudos(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(child: Text('Erro: ${snapshot.error}'));
-                }
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return _buildEmptyState();
-                }
-
-                _conteudos = snapshot.data!;
-                final conteudosFiltrados = _conteudos.where((c) {
-                  return _filtroSelecionado == null ||
-                      c.tipo == _filtroSelecionado;
-                }).toList();
-
-                if (conteudosFiltrados.isEmpty) {
-                  return Center(
-                      child: Text(
-                          'Nenhum conteúdo do tipo "${_filtroSelecionado?.name.toUpperCase()}" encontrado.'));
-                }
-
-                return ReorderableListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: conteudosFiltrados.length,
-                  itemBuilder: (context, index) {
-                    return _buildConteudoCard(conteudosFiltrados[index], index);
-                  },
-                  onReorder: (oldIndex, newIndex) {
-                    setState(() {
-                      if (_filtroSelecionado != null) {
-                        final item = conteudosFiltrados.removeAt(oldIndex);
-                        conteudosFiltrados.insert(newIndex > oldIndex ? newIndex - 1 : newIndex, item);
-                        _conteudos = snapshot.data!; 
-                        for (var filteredItem in conteudosFiltrados.reversed) {
-                          _conteudos.removeWhere((item) => item.id == filteredItem.id);
-                          _conteudos.insert(0, filteredItem);
-                        }
-
-                      } else {
-                         if (newIndex > oldIndex) {
-                           newIndex -= 1;
-                         }
-                         final item = _conteudos.removeAt(oldIndex);
-                         _conteudos.insert(newIndex, item);
-                      }
-                      _service.updateOrdem(_conteudos);
-                    });
-                  },
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.school_outlined, size: 80, color: Colors.grey),
-          const SizedBox(height: 16),
-          const Text('Ainda não há conteúdo', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-          Text('Adicione o seu primeiro material educativo.', style: TextStyle(fontSize: 16, color: Colors.grey[400])),
-          const SizedBox(height: 24),
-           ElevatedButton.icon(
-            onPressed: () => context.push('/add-conteudo-educativo'),
-            icon: const Icon(Icons.add),
-            label: const Text('Adicionar Conteúdo'),
-          )
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterChips() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-      alignment: Alignment.centerLeft,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Wrap(
-          spacing: 8.0,
-          children: [
-            FilterChip(
-              label: const Text('Todos'),
-              selected: _filtroSelecionado == null,
-              onSelected: (selected) {
-                setState(() => _filtroSelecionado = null);
-              },
-            ),
-            ...ConteudoTipo.values.map((tipo) {
-              return FilterChip(
-                label: Text(tipo.name.toUpperCase()),
-                selected: _filtroSelecionado == tipo,
-                onSelected: (selected) {
-                  setState(() {
-                    _filtroSelecionado = selected ? tipo : null;
-                  });
-                },
-              );
-            }),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildConteudoCard(ConteudoEducativo conteudo, int index) {
-    IconData icon;
-    Color color;
-
-    switch (conteudo.tipo) {
-      case ConteudoTipo.video:
-        icon = Icons.videocam_rounded;
-        color = Colors.redAccent;
-        break;
-      case ConteudoTipo.pdf:
-        icon = Icons.picture_as_pdf_rounded;
-        color = Colors.blueAccent;
-        break;
-      default:
-        icon = Icons.article_rounded;
-        color = Colors.orangeAccent;
-    }
-
-    return Card(
-      key: ValueKey(conteudo.id),
-      margin: const EdgeInsets.only(bottom: 16),
-      child: InkWell(
-        onTap: () async {
-          final uri = Uri.tryParse(conteudo.url);
-          if (uri != null && await canLaunchUrl(uri)) {
-            await launchUrl(uri, mode: LaunchMode.externalApplication);
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Não foi possível abrir o link.')),
-            );
-          }
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Row(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Miniatura
-              SizedBox(
-                width: 100,
-                height: 100,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: CachedNetworkImage(
-                    imageUrl: conteudo.thumbnailUrl ?? '',
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) =>
-                        Container(color: Colors.grey.shade800),
-                    errorWidget: (context, url, error) => Container(
-                      color: Colors.grey.shade800,
-                      child: Icon(icon, color: color, size: 40),
-                    ),
-                  ),
-                ),
+              _buildSectionTitle('Tipo de Conteúdo'),
+              SegmentedButton<InputType>(
+                segments: const [
+                  ButtonSegment(
+                      value: InputType.url,
+                      label: Text('Link Externo'),
+                      icon: Icon(Icons.link)),
+                  ButtonSegment(
+                      value: InputType.file,
+                      label: Text('Arquivo'),
+                      icon: Icon(Icons.upload_file)),
+                ],
+                selected: {_inputType},
+                onSelectionChanged: (newSelection) {
+                  setState(() => _inputType = newSelection.first);
+                },
               ),
-              const SizedBox(width: 16),
-              // Informações do Conteúdo
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(conteudo.titulo,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16)),
-                    const SizedBox(height: 4),
-                    Text(
-                      conteudo.descricao,
-                      style: TextStyle(color: Colors.grey[400]),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Chip(
-                          avatar: Icon(icon, size: 16),
-                          label: Text(conteudo.tipo.name.toUpperCase()),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                        const Spacer(),
-                        Text(
-                          DateFormat('dd/MM/yy').format(conteudo.dataPublicacao),
-                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+              const SizedBox(height: 24),
+              _buildSectionTitle('Detalhes'),
+              TextFormField(
+                controller: _tituloController,
+                decoration: const InputDecoration(labelText: 'Título'),
+                validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
               ),
-              // Alça para Reordenar
-              ReorderableDragStartListener(
-                index: index,
-                child: const Padding(
-                  padding: EdgeInsets.only(left: 12.0),
-                  child: Icon(Icons.drag_handle_rounded),
-                ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _descricaoController,
+                decoration: const InputDecoration(labelText: 'Descrição'),
+                maxLines: 3,
+                validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
               ),
+              const SizedBox(height: 24),
+              if (_inputType == InputType.url)
+                TextFormField(
+                  controller: _urlController,
+                  focusNode: _urlFocusNode,
+                  decoration: const InputDecoration(labelText: 'URL do Conteúdo'),
+                  keyboardType: TextInputType.url,
+                  validator: (v) => (v!.isEmpty ||
+                          Uri.tryParse(v)?.isAbsolute != true)
+                      ? 'URL inválida'
+                      : null,
+                ),
+              if (_inputType == InputType.file) _buildFilePicker(),
+              const SizedBox(height: 16),
+              _buildPreviewCard(),
+              const SizedBox(height: 24),
+              _buildSectionTitle('Thumbnail (Opcional)'),
+              _buildThumbnailPicker(),
+              const SizedBox(height: 24),
+              _buildSectionTitle('Tags'),
+              _buildTagInput(),
+              const SizedBox(height: 32),
+              _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : FilledButton.icon(
+                      onPressed: _submit,
+                      icon: const Icon(Icons.check_circle_outline),
+                      label: const Text('Salvar Conteúdo'),
+                    ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  // --- Widgets de Construção da UI ---
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+    );
+  }
+
+  Widget _buildFilePicker() {
+    return OutlinedButton.icon(
+      icon: const Icon(Icons.attach_file),
+      label: Text(_pickedFile?.name ?? 'Selecionar arquivo do dispositivo'),
+      onPressed: () => _pickFile(false),
+    );
+  }
+
+  Widget _buildThumbnailPicker() {
+    return OutlinedButton.icon(
+      icon: const Icon(Icons.image_outlined),
+      label: Text(_pickedThumbnail?.name ?? 'Selecionar imagem de capa'),
+      onPressed: () => _pickFile(true),
+    );
+  }
+
+  Widget _buildPreviewCard() {
+    if (_isFetchingPreview) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_urlMetadata == null || _urlMetadata?.image == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          Image.network(
+            _urlMetadata!.image!,
+            height: 150,
+            width: double.infinity,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => const Center(
+                child: Icon(Icons.hide_image_outlined, size: 40)),
+          ),
+          ListTile(
+            title: Text(_urlMetadata!.title ?? 'Sem Título'),
+            subtitle:
+                Text(_urlMetadata!.description ?? 'Sem Descrição', maxLines: 2),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTagInput() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 8.0,
+          children: _tagsSugeridas
+              .map((tag) => FilterChip(
+                    label: Text(tag),
+                    selected: _tags.contains(tag),
+                    onSelected: (_) {
+                      setState(() {
+                        if (_tags.contains(tag)) {
+                          _tags.remove(tag);
+                        } else {
+                          _tags.add(tag);
+                        }
+                      });
+                    },
+                  ))
+              .toList(),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _tagController,
+          decoration: InputDecoration(
+            labelText: 'Adicionar nova tag',
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () => _addTag(_tagController.text),
+            ),
+          ),
+          onFieldSubmitted: (value) => _addTag(value),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8.0,
+          children: _tags
+              .map((tag) => Chip(
+                    label: Text(tag),
+                    onDeleted: () => setState(() => _tags.remove(tag)),
+                  ))
+              .toList(),
+        ),
+      ],
     );
   }
 }
