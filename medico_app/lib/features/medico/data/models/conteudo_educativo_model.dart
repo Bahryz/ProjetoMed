@@ -5,10 +5,10 @@ class ConteudoEducativo {
   final String titulo;
   final String descricao;
   final List<String> tags;
-  final String url; // URL externa ou URL de download do Firebase Storage
-  final String? thumbnailUrl; // Essencial para a nova UI
-  final DateTime dataPublicacao;
-  final String criadoPor; // ID do médico que criou
+  final String url;
+  final String? thumbnailUrl;
+  final DateTime createdAt;
+  final String medicoId;
 
   ConteudoEducativo({
     required this.id,
@@ -17,12 +17,12 @@ class ConteudoEducativo {
     required this.tags,
     required this.url,
     this.thumbnailUrl,
-    required this.dataPublicacao,
-    required this.criadoPor,
+    required this.createdAt,
+    required this.medicoId,
   });
 
   factory ConteudoEducativo.fromFirestore(DocumentSnapshot doc) {
-    Map data = doc.data() as Map<String, dynamic>;
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
     return ConteudoEducativo(
       id: doc.id,
       titulo: data['titulo'] ?? '',
@@ -30,9 +30,10 @@ class ConteudoEducativo {
       tags: List<String>.from(data['tags'] ?? []),
       url: data['url'] ?? '',
       thumbnailUrl: data['thumbnailUrl'],
-      dataPublicacao: (data['dataPublicacao'] as Timestamp).toDate(),
-      criadoPor: data['criadoPor'] ?? '',
+      // CORRIGIDO: Lendo 'createdAt'
+      createdAt: (data['createdAt'] as Timestamp? ?? Timestamp.now()).toDate(),
+      // CORRIGIDO: Lendo 'medicoId'
+      medicoId: data['medicoId'] ?? '',
     );
   }
 }
-

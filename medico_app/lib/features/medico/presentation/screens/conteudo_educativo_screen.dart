@@ -1,9 +1,13 @@
+// lib/features/medico/presentation/screens/conteudo_educativo_screen.dart
+
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:medico_app/features/medico/data/models/conteudo_educativo_model.dart';
 import 'package:medico_app/features/medico/data/services/conteudo_educativo_service.dart';
-import 'package:url_launcher/url_launcher.dart';
+
+// O formulário foi movido para um widget separado que será mostrado em um modal
+import 'package:medico_app/features/medico/presentation/widgets/add_edit_conteudo_form.dart';
 
 class ConteudoEducativoScreen extends StatefulWidget {
   const ConteudoEducativoScreen({super.key});
@@ -15,200 +19,168 @@ class ConteudoEducativoScreen extends StatefulWidget {
 
 class _ConteudoEducativoScreenState extends State<ConteudoEducativoScreen> {
   final ConteudoEducativoService _service = ConteudoEducativoService();
-  String? _filtroSelecionado;
-  List<String> _todasAsTags = [];
+
+  void _showAddEditSheet({ConteudoEducativo? conteudo}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.9,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (_, scrollController) {
+            return Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: AddEditConteudoForm(
+                conteudoParaEditar: conteudo,
+                scrollController: scrollController,
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _deleteConteudo(String id) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmar Exclusão'),
+        content: const Text('Tem certeza de que deseja excluir este conteúdo? Esta ação não pode ser desfeita.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar == true) {
+      try {
+        await _service.deleteConteudo(id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Conteúdo excluído com sucesso.')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Erro ao excluir: $e')),
+          );
+        }
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Conteúdo Educativo'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline),
-            onPressed: () => context.push('/add-conteudo-educativo'),
-            tooltip: 'Adicionar Novo Conteúdo',
-          ),
-        ],
+        title: const Text('Gerenciar Conteúdos'),
       ),
-      body: Column(
-        children: [
-          _buildFilterChips(),
-          Expanded(
-            child: StreamBuilder<List<ConteudoEducativo>>(
-              stream: _service.getConteudos(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(child: Text('Erro: ${snapshot.error}'));
-                }
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(
-                    child: Text('Nenhum conteúdo educativo adicionado.'),
-                  );
-                }
-
-                final todosConteudos = snapshot.data!;
-                _todasAsTags =
-                    todosConteudos.expand((c) => c.tags).toSet().toList();
-
-                final conteudosFiltrados = todosConteudos.where((c) {
-                  return _filtroSelecionado == null ||
-                      c.tags.contains(_filtroSelecionado);
-                }).toList();
-
-                if (conteudosFiltrados.isEmpty) {
-                  return Center(
-                      child: Text(
-                          'Nenhum conteúdo com a tag "$_filtroSelecionado" foi encontrado.'));
-                }
-
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: conteudosFiltrados.length,
-                  itemBuilder: (context, index) {
-                    return _buildConteudoCard(conteudosFiltrados[index]);
-                  },
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterChips() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Wrap(
-        spacing: 8.0,
-        children: [
-          FilterChip(
-            label: const Text('Todos'),
-            selected: _filtroSelecionado == null,
-            onSelected: (_) => setState(() => _filtroSelecionado = null),
-          ),
-          ..._todasAsTags.map((tag) {
-            return FilterChip(
-              label: Text(tag),
-              selected: _filtroSelecionado == tag,
-              onSelected: (selected) {
-                setState(() => _filtroSelecionado = selected ? tag : null);
-              },
+      body: StreamBuilder<List<ConteudoEducativo>>(
+        stream: _service.getConteudos(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(
+              child: Text(
+                'Nenhum conteúdo adicionado.\nClique no botão + para começar.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
             );
-          }),
-        ],
+          }
+          final conteudos = snapshot.data!;
+          return ListView.builder(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
+            itemCount: conteudos.length,
+            itemBuilder: (context, index) {
+              return _buildConteudoCard(conteudos[index]);
+            },
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showAddEditSheet(),
+        icon: const Icon(Icons.add),
+        label: const Text('Novo Conteúdo'),
       ),
     );
   }
 
   Widget _buildConteudoCard(ConteudoEducativo conteudo) {
     return Card(
-      elevation: 2,
       margin: const EdgeInsets.only(bottom: 16),
-      child: InkWell(
-        onTap: () async {
-          final uri = Uri.tryParse(conteudo.url);
-          if (uri != null && await canLaunchUrl(uri)) {
-            await launchUrl(uri, mode: LaunchMode.externalApplication);
-          } else if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Não foi possível abrir o link.')),
-            );
-          }
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      conteudo.titulo,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                    onPressed: () => _deleteConteudo(conteudo.id),
-                  ),
-                ],
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (conteudo.thumbnailUrl != null)
+            CachedNetworkImage(
+              imageUrl: conteudo.thumbnailUrl!,
+              height: 160,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Container(height: 160, color: Colors.grey.shade300),
+              errorWidget: (context, url, error) => Container(
+                height: 160,
+                color: Colors.grey.shade200,
+                child: const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
               ),
-              const SizedBox(height: 8),
-              Text(
-                conteudo.descricao,
-                style: TextStyle(color: Colors.grey.shade600),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8.0,
-                runSpacing: 4.0,
-                children: conteudo.tags
-                    .map((tag) => Chip(
-                          label: Text(tag),
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          labelStyle: const TextStyle(fontSize: 12),
-                        ))
-                    .toList(),
-              ),
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.bottomRight,
-                child: Text(
-                  'Publicado em: ${DateFormat('dd/MM/yyyy').format(conteudo.dataPublicacao)}',
-                  style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+            ),
+          ListTile(
+            title: Text(conteudo.titulo, style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text(
+              conteudo.descricao,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            trailing: PopupMenuButton(
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'edit',
+                  child: Row(children: [Icon(Icons.edit_outlined, size: 20), SizedBox(width: 8), Text('Editar')]),
                 ),
-              ),
-            ],
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(children: [Icon(Icons.delete_outline, size: 20), SizedBox(width: 8), Text('Excluir')]),
+                ),
+              ],
+              onSelected: (value) {
+                if (value == 'edit') {
+                  _showAddEditSheet(conteudo: conteudo);
+                } else if (value == 'delete') {
+                  _deleteConteudo(conteudo.id);
+                }
+              },
+            ),
           ),
-        ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Wrap(
+              spacing: 8.0,
+              runSpacing: 4.0,
+              children: conteudo.tags.map((tag) => Chip(label: Text(tag))).toList(),
+            ),
+          ),
+        ],
       ),
     );
-  }
-
-  Future<void> _deleteConteudo(String conteudoId) async {
-    final confirm = await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Confirmar Exclusão'),
-            content:
-                const Text('Tem certeza que deseja excluir este conteúdo?'),
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Cancelar')),
-              TextButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text('Excluir')),
-            ],
-          ),
-        ) ??
-        false;
-
-    if (confirm && mounted) {
-      try {
-        await _service.deleteConteudo(conteudoId);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Conteúdo excluído com sucesso!')),
-        );
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao excluir: $e')),
-        );
-      }
-    }
   }
 }

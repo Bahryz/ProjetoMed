@@ -20,7 +20,7 @@ class _PacienteConteudoEducativoScreenState
   String _filtroTag = 'Todos';
   List<String> _todasAsTags = ['Todos'];
   String _searchQuery = '';
-  // TODO: Implementar lógica de favoritos
+  // TODO: Substituir por uma lógica de persistência (SharedPreferences ou Firestore)
   final List<String> _favoritos = []; 
 
   @override
@@ -47,6 +47,20 @@ class _PacienteConteudoEducativoScreenState
     });
   }
 
+  // Novo método para agrupar conteúdos por tag
+  Map<String, List<ConteudoEducativo>> _agruparConteudosPorTag(List<ConteudoEducativo> conteudos) {
+    final Map<String, List<ConteudoEducativo>> mapa = {};
+    for (var conteudo in conteudos) {
+      for (var tag in conteudo.tags) {
+        if (mapa[tag] == null) {
+          mapa[tag] = [];
+        }
+        mapa[tag]!.add(conteudo);
+      }
+    }
+    return mapa;
+  }
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -73,32 +87,46 @@ class _PacienteConteudoEducativoScreenState
 
                 final todosConteudos = snapshot.data!;
                 _todasAsTags = ['Todos', 'Favoritos', ...todosConteudos.expand((c) => c.tags).toSet()];
-
-                final conteudosFiltrados = todosConteudos.where((c) {
-                  final correspondeTag = _filtroTag == 'Todos'
-                      ? true
-                      : _filtroTag == 'Favoritos'
-                          ? _favoritos.contains(c.id)
-                          : c.tags.contains(_filtroTag);
-
+                
+                final conteudosVisiveis = todosConteudos.where((c) {
                   final correspondeBusca = _searchQuery.isEmpty ||
                       c.titulo.toLowerCase().contains(_searchQuery) ||
                       c.descricao.toLowerCase().contains(_searchQuery) ||
                       c.tags.any((t) => t.toLowerCase().contains(_searchQuery));
-                      
-                  return correspondeTag && correspondeBusca;
+                  
+                  if (_filtroTag == 'Todos') return correspondeBusca;
+                  if (_filtroTag == 'Favoritos') return _favoritos.contains(c.id) && correspondeBusca;
+                  return c.tags.contains(_filtroTag) && correspondeBusca;
                 }).toList();
-
-                if (conteudosFiltrados.isEmpty) {
+                
+                if (conteudosVisiveis.isEmpty) {
                   return const Center(child: Text('Nenhum resultado encontrado.'));
                 }
+                
+                // Se um filtro está ativo (exceto favoritos), mostra uma lista simples
+                if (_filtroTag != 'Todos' && _filtroTag != 'Favoritos') {
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: conteudosVisiveis.length,
+                    itemBuilder: (context, index) {
+                      return _buildConteudoCardVertical(conteudosVisiveis[index]);
+                    },
+                  );
+                }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: conteudosFiltrados.length,
-                  itemBuilder: (context, index) {
-                    return _buildConteudoCard(conteudosFiltrados[index]);
-                  },
+                final conteudosAgrupados = _agruparConteudosPorTag(conteudosVisiveis);
+                
+                return ListView(
+                  children: [
+                    // Exibe a seção de Favoritos primeiro se selecionada
+                    if (_filtroTag == 'Favoritos' || (_filtroTag == 'Todos' && _favoritos.isNotEmpty))
+                      _buildConteudoSection('Favoritos', conteudosVisiveis.where((c) => _favoritos.contains(c.id)).toList()),
+                    
+                    // Exibe as outras seções
+                    ...conteudosAgrupados.entries.map((entry) {
+                      return _buildConteudoSection(entry.key, entry.value);
+                    }).toList(),
+                  ],
                 );
               },
             ),
@@ -121,6 +149,7 @@ class _PacienteConteudoEducativoScreenState
             borderSide: BorderSide.none,
           ),
           filled: true,
+          fillColor: Theme.of(context).scaffoldBackgroundColor.withAlpha(200),
         ),
       ),
     );
@@ -148,22 +177,101 @@ class _PacienteConteudoEducativoScreenState
     );
   }
 
-  Widget _buildConteudoCard(ConteudoEducativo conteudo) {
+  // Seção com scroll horizontal
+  Widget _buildConteudoSection(String titulo, List<ConteudoEducativo> conteudos) {
+    if (conteudos.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Text(
+            titulo,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          ),
+        ),
+        SizedBox(
+          height: 230,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: conteudos.length,
+            itemBuilder: (context, index) {
+              return _buildConteudoCardHorizontal(conteudos[index]);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Card para listas horizontais (mais compacto)
+  Widget _buildConteudoCardHorizontal(ConteudoEducativo conteudo) {
+    final isFavorito = _favoritos.contains(conteudo.id);
+    return SizedBox(
+      width: 160,
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        margin: const EdgeInsets.only(right: 12),
+        child: InkWell(
+          onTap: () => _abrirUrl(conteudo.url),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                alignment: Alignment.topRight,
+                children: [
+                  CachedNetworkImage(
+                    imageUrl: conteudo.thumbnailUrl ?? "URL_PADRAO",
+                    height: 120,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(color: Colors.grey.shade800),
+                    errorWidget: (context, url, error) => Container(height: 120, color: Colors.grey.shade800, child: const Icon(Icons.school, color: Colors.white70)),
+                  ),
+                  _buildBotaoFavorito(isFavorito, () => _toggleFavorito(conteudo.id)),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(
+                  conteudo.titulo,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const Spacer(),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                child: Text(
+                  conteudo.tags.join(', '),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Card para a lista vertical (quando um filtro está ativo)
+  Widget _buildConteudoCardVertical(ConteudoEducativo conteudo) {
     final isFavorito = _favoritos.contains(conteudo.id);
     return Card(
       clipBehavior: Clip.antiAlias,
       margin: const EdgeInsets.only(bottom: 20),
       child: InkWell(
-        onTap: () async {
-          final uri = Uri.tryParse(conteudo.url);
-          if (uri != null && await canLaunchUrl(uri)) {
-            await launchUrl(uri);
-          }
-        },
+        onTap: () => _abrirUrl(conteudo.url),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Stack(
+              alignment: Alignment.topRight,
               children: [
                 if (conteudo.thumbnailUrl != null)
                   CachedNetworkImage(
@@ -176,16 +284,8 @@ class _PacienteConteudoEducativoScreenState
                   )
                 else
                   Container(height: 180, color: Theme.of(context).primaryColor.withOpacity(0.1), child: const Center(child: Icon(Icons.school, size: 50))),
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: IconButton(
-                    icon: Icon(isFavorito ? Icons.bookmark : Icons.bookmark_border),
-                    onPressed: () => _toggleFavorito(conteudo.id),
-                    color: Colors.white,
-                    style: IconButton.styleFrom(backgroundColor: Colors.black.withOpacity(0.4)),
-                  ),
-                ),
+                
+                _buildBotaoFavorito(isFavorito, () => _toggleFavorito(conteudo.id)),
               ],
             ),
             Padding(
@@ -213,5 +313,36 @@ class _PacienteConteudoEducativoScreenState
         ),
       ),
     );
+  }
+
+  Widget _buildBotaoFavorito(bool isFavorito, VoidCallback onPressed) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: CircleAvatar(
+        backgroundColor: Colors.black.withOpacity(0.5),
+        radius: 18,
+        child: IconButton(
+          padding: EdgeInsets.zero,
+          icon: Icon(
+            isFavorito ? Icons.bookmark : Icons.bookmark_border,
+            color: Colors.white,
+            size: 20,
+          ),
+          onPressed: onPressed,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _abrirUrl(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri != null && await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      // Opcional: Mostrar um SnackBar caso a URL seja inválida
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Não foi possível abrir o link: $url')),
+      );
+    }
   }
 }

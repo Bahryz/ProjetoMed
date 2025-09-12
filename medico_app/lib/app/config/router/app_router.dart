@@ -25,16 +25,13 @@ import 'package:medico_app/features/settings/presentation/screens/settings_scree
 // --- Telas da Área do Médico ---
 import 'package:medico_app/features/medico/presentation/screens/agenda_screen.dart';
 import 'package:medico_app/features/medico/presentation/screens/feedbacks_screen.dart';
-// IMPORT CORRETO (SEM "AS CONTEUDO")
 import 'package:medico_app/features/medico/presentation/screens/conteudo_educativo_screen.dart';
-import 'package:medico_app/features/medico/presentation/screens/add_conteudo_educativo_screen.dart';
 
 // --- Telas da Área do Paciente ---
 import 'package:medico_app/features/paciente/presentation/screens/solicitar_agentamento_screen.dart';
 import 'package:medico_app/features/paciente/presentation/screens/meus_agentamentos.dart';
 import 'package:medico_app/features/paciente/presentation/screens/paciente_conteudo_educativo_screen.dart';
 import 'package:medico_app/features/documentos/presentation/screens/documentos_screen.dart';
-
 
 class AppRouter {
   final AuthController authController;
@@ -57,7 +54,6 @@ class AppRouter {
           return HomeScreen(currentUser: user);
         },
       ),
-
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/register-paciente', builder: (context, state) => const RegisterPacienteScreen()),
       GoRoute(path: '/register-medico', builder: (context, state) => const RegisterMedicoScreen()),
@@ -79,13 +75,15 @@ class AppRouter {
         },
       ),
 
-      // ROTA CORRIGIDA
+      // ROTA DE CONTEÚDO DO MÉDICO
       GoRoute(
         path: '/conteudo-educativo',
-        builder: (context, state) => const ConteudoEducativoScreen(), // USO CORRETO
+        builder: (context, state) => const ConteudoEducativoScreen(),
       ),
 
-      GoRoute(path: '/add-conteudo-educativo', builder: (context, state) => const AddConteudoEducativoScreen()),
+      // ROTA REMOVIDA, POIS A TELA FOI FUNDIDA
+      // GoRoute(path: '/add-conteudo-educativo', builder: (context, state) => const AddConteudoEducativoScreen()),
+
       GoRoute(path: '/agenda', builder: (context, state) => const AgendaScreen()),
       GoRoute(path: '/feedbacks', builder: (context, state) => const FeedbacksScreen()),
       GoRoute(path: '/solicitar-agendamento', builder: (context, state) => const SolicitarAgendamentoScreen()),
